@@ -84,11 +84,19 @@ class LocationFusionTest {
 
     @Test
     fun `estima sobre el anillo BLE en la direccion del GPS`() {
-        val target = Geo.destination(seeker, 60.0, 20.0)
-        val fused = LocationFusion.fuse(seeker, target, 10.0, bleDistanceMeters = 8.0, bleMinMeters = 6.0, bleMaxMeters = 11.0)
+        val target = Geo.destination(seeker, 60.0, 12.0)
+        val fused = LocationFusion.fuse(seeker, target, 5.0, bleDistanceMeters = 8.0, bleMinMeters = 6.0, bleMaxMeters = 11.0)
         assertEquals(8.0, Geo.distanceMeters(seeker, fused.estimate), 0.01)
         assertEquals(60.0, fused.bearingDegrees, 0.1)
         assertTrue(fused.consistent)
+        assertFalse(fused.preferBluetooth)
+    }
+
+    @Test
+    fun `cerca, con distancia BLE menor que el error GPS, manda el Bluetooth`() {
+        val target = Geo.destination(seeker, 90.0, 9.0)
+        val fused = LocationFusion.fuse(seeker, target, 12.0, bleDistanceMeters = 0.4, bleMinMeters = 0.2, bleMaxMeters = 0.8)
+        assertTrue(fused.preferBluetooth)
     }
 
     @Test
