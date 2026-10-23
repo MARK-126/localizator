@@ -24,6 +24,18 @@ class Calibrator(private val defaultExponent: Double = PathLossModel.DEFAULT_EXP
 
     fun sampleCount(distanceMeters: Double): Int = samplesByDistance[distanceMeters]?.size ?: 0
 
+    /** Mediana de las muestras a [distanceMeters], o `null` si no hay muestras. */
+    fun medianRssi(distanceMeters: Double): Double? = samplesByDistance[distanceMeters]?.takeIf { it.isNotEmpty() }?.median()
+
+    /** Distancia estimada por [model] con la mediana de cada distancia medida: distancia real → estimada. */
+    fun evaluate(model: PathLossModel): Map<Double, Double> =
+        samplesByDistance.filterValues { it.isNotEmpty() }.mapValues { (_, samples) -> model.distanceMeters(samples.median()) }
+
+    /** Descarta las muestras a [distanceMeters]. */
+    fun clear(distanceMeters: Double) {
+        samplesByDistance.remove(distanceMeters)
+    }
+
     fun clear() = samplesByDistance.clear()
 
     /**
