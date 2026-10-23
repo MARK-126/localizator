@@ -1,11 +1,13 @@
 package io.localizator.app.ble
 
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothClass
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import io.localizator.core.tracking.Advertisement
+import io.localizator.core.tracking.DeviceCategory
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -68,5 +70,16 @@ private fun ScanResult.toAdvertisement(): Advertisement {
         txPower = record?.txPowerLevel?.takeIf { it != Int.MIN_VALUE },
         timestampMs = timestampNanos / 1_000_000,
         manufacturerId = manufacturerData?.takeIf { it.size() > 0 }?.keyAt(0),
+        category = deviceCategory(),
     )
+}
+
+@SuppressLint("MissingPermission")
+private fun ScanResult.deviceCategory(): DeviceCategory {
+    val major = runCatching { device.bluetoothClass?.majorDeviceClass }.getOrNull()
+    return when (major) {
+        null, BluetoothClass.Device.Major.UNCATEGORIZED -> DeviceCategory.UNKNOWN
+        BluetoothClass.Device.Major.PHONE -> DeviceCategory.PHONE
+        else -> DeviceCategory.OTHER
+    }
 }

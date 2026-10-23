@@ -13,10 +13,13 @@
     <string name="nearby_unknown_device">Dispositivo desconocido</string>
     <string name="nearby_rssi">%1$d dBm · %2$s</string>
     <string name="nearby_range">%1$s – %2$s</string>
+    <string name="nearby_no_matches">Ningún dispositivo coincide con los filtros.</string>
     <plurals name="nearby_count">
-        <item quantity="one">%d dispositivo cercano</item>
-        <item quantity="other">%d dispositivos cercanos</item>
+        <item quantity="one">%1$d de %2$d dispositivo</item>
+        <item quantity="other">%1$d de %2$d dispositivos</item>
     </plurals>
+    <string name="filter_android_only">Solo Android</string>
+    <string name="filter_max_distance">≤ %1$d m</string>
     <string name="zone_immediate">Inmediato</string>
     <string name="zone_near">Cerca</string>
     <string name="zone_far">Lejos</string>
