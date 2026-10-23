@@ -25,12 +25,14 @@ import io.localizator.core.tracking.DeviceTracker
 import io.localizator.core.tracking.NearbyFilter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retryWhen
@@ -84,13 +86,16 @@ data class SelectedDevice(val estimate: DeviceEstimate, val details: Advertiseme
  * 5 inicios cada 30 s).
  *
  * Un anuncio con payload de faro que coincide con un teléfono emparejado se registra con el ID
- * estable del emparejamiento ([PairedBeacon.id]) y su nombre, en lugar de la MAC. Si el payload
- * trae P1m, se usa como calibración de ese teléfono. Si el mismo resultado trae la respuesta de
+ * estable del emparejamiento ([PairedBeacon.id]) y su nombre, en lugar de la MAC. La calibración
+ * guardada por el usuario se aplica a ese ID; si no existe y el payload trae P1m, se usa el P1m
+ * anunciado. Si el mismo resultado trae la respuesta de
  * escaneo con ubicación, se descifra con el secreto del emparejamiento y el ID rotativo del anuncio.
  */
 class NearbyViewModel(application: Application) : AndroidViewModel(application) {
 
     private val pairedRepository = application.localizatorApp.pairedBeacons
+    private val calibrationRepository = application.localizatorApp.calibrations
+    private val resolvedAdvertisements = MutableSharedFlow<Advertisement>(extraBufferCapacity = SAMPLE_BUFFER)
     private val scanner = BleScanner(application)
     private val tracker = DeviceTracker()
     private val filter = MutableStateFlow(NearbyFilter())
@@ -110,6 +115,7 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
                     val advertisement = resolve(sample)
                     details[advertisement.id] = sample.details
                     tracker.onAdvertisement(advertisement)
+                    resolvedAdvertisements.tryEmit(advertisement)
                 }
         }
         while (isActive) {
@@ -152,9 +158,20 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
     @Volatile
     private var matcher = BeaconMatcher(pairedRepository.beacons.value)
 
+    /** Calibraciones guardadas por ID de emparejamiento. */
+    val calibrations: StateFlow<Map<String, PathLossModel>> = calibrationRepository.models
+
     init {
         viewModelScope.launch {
             pairedRepository.beacons.collect { matcher = BeaconMatcher(it) }
+        }
+        viewModelScope.launch {
+            var applied = emptySet<String>()
+            calibrationRepository.models.collect { models ->
+                (applied - models.keys).forEach(tracker::clearCalibration)
+                models.forEach { (id, model) -> tracker.setCalibration(id, model) }
+                applied = models.keys
+            }
         }
     }
 
@@ -170,9 +187,23 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
     /** Empareja el teléfono del código [text]. Devuelve el emparejado, o `null` si el código no es válido. */
     fun pair(text: String): PairedBeacon? = PairingCode.parse(text)?.also(pairedRepository::add)
 
-    /** Olvida el teléfono emparejado [id] y cierra su detalle. */
+    /**
+     * RSSI crudo (dBm) de cada anuncio del dispositivo [id] mientras el escaneo está activo (es decir,
+     * mientras [uiState] tiene suscriptores).
+     */
+    fun rssiSamples(id: String): Flow<Int> = resolvedAdvertisements.filter { it.id == id }.map { it.rssi }
+
+    /** Modelo que se aplica actualmente a [id]: calibración, P1m anunciado o modelo por defecto. */
+    fun currentModel(id: String): PathLossModel = tracker.modelFor(id, null).first
+
+    fun saveCalibration(id: String, model: PathLossModel) = calibrationRepository.save(id, model)
+
+    fun clearCalibration(id: String) = calibrationRepository.remove(id)
+
+    /** Olvida el teléfono emparejado [id], su calibración y su ubicación, y cierra su detalle. */
     fun forget(id: String) {
         pairedRepository.remove(id)
+        calibrationRepository.remove(id)
         tracker.clearCalibration(id)
         locations.remove(id)
         select(null)
@@ -187,7 +218,9 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
     private fun resolve(sample: ScanSample): Advertisement {
         val payload = sample.beaconPayload?.let(BeaconCodec::decode) ?: return sample.advertisement
         val beacon = matcher.match(payload, System.currentTimeMillis()) ?: return sample.advertisement
-        payload.measuredPowerAt1m?.let { tracker.setCalibration(beacon.id, PathLossModel(it.toDouble())) }
+        if (beacon.id !in calibrationRepository.models.value) {
+            payload.measuredPowerAt1m?.let { tracker.setCalibration(beacon.id, PathLossModel(it.toDouble())) }
+        }
         sample.locationPayload
             ?.let { LocationPayload.decode(it, beacon.secret, payload.rotatingId) }
             ?.let { locations[beacon.id] = ReceivedLocation(it, SystemClock.elapsedRealtime()) }
@@ -199,5 +232,6 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
         const val RETRY_DELAY_MS = 6_000L
         const val STOP_TIMEOUT_MS = 5_000L
         const val OWN_LOCATION_INTERVAL_MS = 5_000L
+        const val SAMPLE_BUFFER = 64
     }
 }
