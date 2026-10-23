@@ -11,6 +11,8 @@ rama feature/NN-… ──push──▶ Pull Request a main ──▶ CI (tests-
 - `main` solo recibe cambios mediante Pull Request.
 - Una PR se puede mergear únicamente si todas las comprobaciones obligatorias están en verde.
 - Título del commit de merge: `Merge feature/NN-nombre` (≤ 45 caracteres).
+- Al mergear, GitHub borra la rama de la PR (*Settings → General → Pull Requests →
+  Automatically delete head branches*). Se puede restaurar desde la PR con *Restore branch*.
 
 ## Workflow `.github/workflows/android.yml`
 

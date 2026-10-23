@@ -18,7 +18,7 @@ gradle :core:test
 |---|---|
 | `io.localizator.core.signal` | `PathLossModel`, `KalmanFilter`, `TrendDetector`, `Trend` |
 | `io.localizator.core.calibration` | `Calibrator` |
-| `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource` |
+| `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource`, `Manufacturers`, `DeviceCategory`, `NearbyFilter`, `DeviceNames` |
 
 ## Flujo de datos
 
@@ -98,7 +98,7 @@ Mantiene un estado por `Advertisement.id`. Es thread-safe (`@Synchronized`).
 
 | Método | Descripción |
 |---|---|
-| `onAdvertisement(adv)` | Actualiza filtro y tendencia; devuelve `DeviceEstimate`. Los campos `name`, `txPower` y `manufacturerId` nulos conservan el último valor. |
+| `onAdvertisement(adv)` | Actualiza filtro y tendencia; devuelve `DeviceEstimate`. Los campos `name`, `txPower`, `manufacturerId`, `manufacturerIds` y `category` ausentes conservan el último valor. |
 | `snapshot(now)` | Descarta los estados con `now − lastSeen > staleAfterMs` (10 s) y devuelve el resto ordenado por distancia. |
 | `estimateFor(id)` | Estimación actual o `null`. |
 | `setCalibration(id, model)` / `clearCalibration(id)` | Calibración por dispositivo. |
@@ -109,6 +109,58 @@ Mantiene un estado por `Advertisement.id`. Es thread-safe (`@Synchronized`).
 
 **Zonas** (`ProximityZone.fromDistance`): `IMMEDIATE` < 0,5 m ≤ `NEAR` < 2,5 m ≤ `FAR`.
 
+## `tracking.Manufacturers`
+
+Tabla de Company Identifiers del Bluetooth SIG.
+
+| Método | Resultado |
+|---|---|
+| `nameOf(id: Int?)` | Nombre, o `null` si `id` es nulo o no está en la tabla |
+| `labelOf(id: Int)` | Nombre, o el identificador en hexadecimal (`0x01AB`) |
+
+Fabricantes incluidos: Microsoft `0x0006`, Apple `0x004C`, Samsung `0x0075`, Garmin `0x0087`,
+Bose `0x009E`, Google `0x00E0`, Sony `0x012D`. Constantes públicas: `APPLE`, `SAMSUNG`, `GOOGLE`.
+
+## `tracking.DeviceCategory`
+
+Tipo de dispositivo según la *Major Device Class* de Bluetooth.
+`fromMajorDeviceClass(major: Int?)`:
+
+| Major class | Categoría |
+|---|---|
+| `null`, `0x0000` (Miscellaneous), `0x1F00` (Uncategorized) | `UNKNOWN` |
+| `0x0200` (Phone) | `PHONE` |
+| Cualquier otra | `OTHER` |
+
+Android devuelve `0x0000` cuando no conoce la clase de un dispositivo solo-BLE no emparejado,
+por eso se trata como `UNKNOWN`. `DeviceTracker` conserva la última categoría distinta de
+`UNKNOWN`.
+
+## `tracking.NearbyFilter`
+
+| Propiedad | Por defecto | Efecto |
+|---|---|---|
+| `maxDistanceMeters` | 30 m | Descarta `distanceMeters > max` |
+| `androidPhonesOnly` | `false` | Solo deja los que cumplen `isLikelyAndroidPhone()` |
+
+`DeviceEstimate.isLikelyAndroidPhone()` es heurístico y evalúa **todos** los fabricantes del
+anuncio (`manufacturerIds`), no solo el primero:
+
+| `category` | Resultado |
+|---|---|
+| `PHONE` | `APPLE ∉ manufacturerIds` |
+| `OTHER` | `false` |
+| `UNKNOWN` | `manufacturerIds ∩ {SAMSUNG, GOOGLE} ≠ ∅` |
+
+Admite falsos positivos (otros dispositivos Samsung o Google, como auriculares, relojes o
+televisores) y falsos negativos (teléfonos que no anuncian fabricante). La identificación exacta
+requiere el faro propio.
+
+## `tracking.DeviceNames`
+
+`sanitize(raw: String?)`: recorta los espacios de los extremos. Devuelve `null` si el resultado
+queda vacío o contiene caracteres de control o `U+FFFD` (bytes no decodificables como UTF-8).
+
 ## Cobertura de tests
 
 | Clase | Comportamiento verificado |
@@ -117,4 +169,8 @@ Mantiene un estado por `Advertisement.id`. Es thread-safe (`@Synchronized`).
 | `KalmanFilter` | Convergencia con ruido σ = 4 dB, rechazo de pico aislado, seguimiento de un cambio sostenido, reacción en ≤ 1 s a 10 Hz |
 | `TrendDetector` | Acercamiento, alejamiento y señal estable |
 | `Calibrator` | Ajuste con 1 punto, recuperación de P1m y n con 2 puntos y ruido, muestras insuficientes |
-| `DeviceTracker` | Error filtrado < ½ del crudo y < 0,5 m (3 m, σ = 5 dB), prioridad de modelo, intervalo más estrecho al calibrar, purga y orden, persistencia del nombre |
+| `Manufacturers` | Fabricantes conocidos, desconocidos y nulos, etiqueta hexadecimal |
+| `NearbyFilter` | Distancia máxima, filtro Android, heurística por categoría y fabricante, fabricantes no iniciales |
+| `DeviceCategory` | Conversión de major class (`0x0000` y `0x1F00` → `UNKNOWN`), anuncio real de un Galaxy S25 Ultra pasa el filtro Android |
+| `DeviceNames` | Recorte, vacíos y nulos, bytes no decodificables y caracteres de control |
+| `DeviceTracker` | Error filtrado < ½ del crudo y < 0,5 m (3 m, σ = 5 dB), prioridad de modelo, intervalo más estrecho al calibrar, purga y orden, persistencia del nombre y de la categoría |

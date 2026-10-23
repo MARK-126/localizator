@@ -15,8 +15,8 @@ import kotlin.math.sqrt
  * Incertidumbre: `σ = √(P + σ_modelo²)`, con P la varianza del filtro y `σ_modelo` de
  * 2 / 4 / 6 dB según [ModelSource]. El intervalo es `[d(RSSI + σ), d(RSSI − σ)]`.
  *
- * Los campos `name`, `txPower` y `manufacturerId` ausentes en un anuncio conservan el último
- * valor conocido. Thread-safe.
+ * Los campos `name`, `txPower`, `manufacturerId`, `manufacturerIds` y `category` ausentes en un
+ * anuncio conservan el último valor conocido. Thread-safe.
  *
  * @param staleAfterMs antigüedad (ms) a partir de la cual [snapshot] descarta un dispositivo.
  */
@@ -44,6 +44,8 @@ class DeviceTracker(
             name = adv.name ?: state.last.name,
             txPower = adv.txPower ?: state.last.txPower,
             manufacturerId = adv.manufacturerId ?: state.last.manufacturerId,
+            manufacturerIds = adv.manufacturerIds.ifEmpty { state.last.manufacturerIds },
+            category = adv.category.takeIf { it != DeviceCategory.UNKNOWN } ?: state.last.category,
         )
         state.sampleCount++
         val filtered = state.filter.update(adv.rssi.toDouble(), adv.timestampMs)
@@ -94,6 +96,8 @@ class DeviceTracker(
             id = id,
             name = s.last.name,
             manufacturerId = s.last.manufacturerId,
+            manufacturerIds = s.last.manufacturerIds,
+            category = s.last.category,
             rawRssi = s.last.rssi,
             filteredRssi = rssi,
             distanceMeters = distance,

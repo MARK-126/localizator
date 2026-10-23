@@ -73,6 +73,14 @@ class DeviceTrackerTest {
         val est = tracker.onAdvertisement(Advertisement("X", null, -61, timestampMs = 100))
         assertEquals("Auriculares", est.name)
     }
+
+    @Test
+    fun `conserva la categoria conocida aunque un paquete no la traiga`() {
+        val tracker = DeviceTracker()
+        tracker.onAdvertisement(Advertisement("X", null, -60, timestampMs = 0, category = DeviceCategory.PHONE))
+        val est = tracker.onAdvertisement(Advertisement("X", null, -61, timestampMs = 100))
+        assertEquals(DeviceCategory.PHONE, est.category)
+    }
 }
 
 private const val WARM_UP_SAMPLES = 50
