@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Localizator</string>
+    <string name="permissions_title">Permisos de Bluetooth</string>
+    <string name="permissions_body">Localizator necesita permiso para buscar y emitir señales Bluetooth cercanas.</string>
+    <string name="permissions_grant">Conceder permisos</string>
+    <string name="permissions_settings">Abrir ajustes</string>
+    <string name="bluetooth_off_title">Bluetooth desactivado</string>
+    <string name="bluetooth_off_body">Activa el Bluetooth para buscar dispositivos.</string>
+    <string name="bluetooth_enable">Activar Bluetooth</string>
+    <string name="ready_title">Listo</string>
+    <string name="ready_body">Bluetooth activo y permisos concedidos.</string>
+    <string name="bluetooth_unsupported">Este dispositivo no tiene Bluetooth Low Energy.</string>
+</resources>
