@@ -12,6 +12,7 @@ import android.content.IntentFilter
 import android.os.ParcelUuid
 import androidx.core.content.ContextCompat
 import io.localizator.core.beacon.BeaconProtocol
+import io.localizator.core.location.LocationPayload
 import io.localizator.core.tracking.Advertisement
 import io.localizator.core.tracking.DeviceCategory
 import io.localizator.core.tracking.DeviceNames
@@ -108,7 +109,8 @@ private fun ScanResult.toSample(): ScanSample {
         rawBytes = record?.bytes?.toHex().orEmpty(),
     )
     val beaconPayload = record?.getServiceData(ParcelUuid(BeaconProtocol.SERVICE_UUID))
-    return ScanSample(advertisement, details, beaconPayload)
+    val locationPayload = record?.getServiceData(ParcelUuid(LocationPayload.SERVICE_UUID))
+    return ScanSample(advertisement, details, beaconPayload, locationPayload)
 }
 
 @SuppressLint("MissingPermission")

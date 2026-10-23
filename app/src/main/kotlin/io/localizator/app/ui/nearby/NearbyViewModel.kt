@@ -1,6 +1,7 @@
 package io.localizator.app.ui.nearby
 
 import android.app.Application
+import android.location.Location
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,11 +9,14 @@ import io.localizator.app.ble.AdvertisementDetails
 import io.localizator.app.ble.BleScanner
 import io.localizator.app.ble.ScanSample
 import io.localizator.app.localizatorApp
+import io.localizator.app.location.LocationSource
 import io.localizator.app.sensors.CompassProvider
 import io.localizator.core.beacon.BeaconCodec
 import io.localizator.core.beacon.BeaconMatcher
 import io.localizator.core.beacon.PairedBeacon
 import io.localizator.core.beacon.PairingCode
+import io.localizator.core.location.LocationPayload
+import io.localizator.core.location.SharedLocation
 import io.localizator.core.signal.HeadingFilter
 import io.localizator.core.signal.PathLossModel
 import io.localizator.core.tracking.Advertisement
@@ -20,6 +24,7 @@ import io.localizator.core.tracking.DeviceEstimate
 import io.localizator.core.tracking.DeviceTracker
 import io.localizator.core.tracking.NearbyFilter
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -51,8 +56,21 @@ data class NearbyUiState(
     val selected: SelectedDevice? = null,
 )
 
-/** Teléfono emparejado y su estimación actual (`null` si no se detecta). */
-data class MyPhone(val beacon: PairedBeacon, val estimate: DeviceEstimate?)
+/**
+ * Teléfono emparejado, su estimación actual (`null` si no se detecta) y la última ubicación GPS que
+ * compartió (`null` si no la comparte o aún no se recibió).
+ */
+data class MyPhone(val beacon: PairedBeacon, val estimate: DeviceEstimate?, val location: ReceivedLocation? = null)
+
+/**
+ * Ubicación compartida por un teléfono emparejado.
+ *
+ * @property receivedAtMs instante de recepción (`SystemClock.elapsedRealtime`).
+ */
+data class ReceivedLocation(val location: SharedLocation, val receivedAtMs: Long) {
+    /** Antigüedad total (s) en [nowMs]: la anunciada más el tiempo desde la recepción. */
+    fun ageSeconds(nowMs: Long): Long = location.ageSeconds + (nowMs - receivedAtMs) / 1000
+}
 
 /** Dispositivo abierto en el detalle: estimación actual y último anuncio en crudo. */
 data class SelectedDevice(val estimate: DeviceEstimate, val details: AdvertisementDetails?)
@@ -67,7 +85,8 @@ data class SelectedDevice(val estimate: DeviceEstimate, val details: Advertiseme
  *
  * Un anuncio con payload de faro que coincide con un teléfono emparejado se registra con el ID
  * estable del emparejamiento ([PairedBeacon.id]) y su nombre, en lugar de la MAC. Si el payload
- * trae P1m, se usa como calibración de ese teléfono.
+ * trae P1m, se usa como calibración de ese teléfono. Si el mismo resultado trae la respuesta de
+ * escaneo con ubicación, se descifra con el secreto del emparejamiento y el ID rotativo del anuncio.
  */
 class NearbyViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -77,6 +96,8 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
     private val filter = MutableStateFlow(NearbyFilter())
     private val selectedId = MutableStateFlow<String?>(null)
     private val details = ConcurrentHashMap<String, AdvertisementDetails>()
+    private val locations = ConcurrentHashMap<String, ReceivedLocation>()
+    private val locationSource = LocationSource(application)
 
     private val snapshots = channelFlow {
         launch {
@@ -109,7 +130,7 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
         val pairedIds = paired.map { it.id }.toSet()
         val others = devices.filterNot { it.id in pairedIds }
         NearbyUiState(
-            myPhones = paired.map { MyPhone(it, byId[it.id]) },
+            myPhones = paired.map { MyPhone(it, byId[it.id], locations[it.id]) },
             devices = currentFilter.apply(others),
             totalCount = others.size,
             filter = currentFilter,
@@ -153,13 +174,23 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
     fun forget(id: String) {
         pairedRepository.remove(id)
         tracker.clearCalibration(id)
+        locations.remove(id)
         select(null)
     }
+
+    /** `true` si hay permiso de ubicación para mostrar la posición propia en el mapa. */
+    fun hasLocationPermission(): Boolean = locationSource.hasPermission()
+
+    /** Posiciones propias cada [OWN_LOCATION_INTERVAL_MS] con alta precisión; requiere permiso de ubicación. */
+    fun ownLocationUpdates(): Flow<Location> = locationSource.updates(OWN_LOCATION_INTERVAL_MS, highAccuracy = true)
 
     private fun resolve(sample: ScanSample): Advertisement {
         val payload = sample.beaconPayload?.let(BeaconCodec::decode) ?: return sample.advertisement
         val beacon = matcher.match(payload, System.currentTimeMillis()) ?: return sample.advertisement
         payload.measuredPowerAt1m?.let { tracker.setCalibration(beacon.id, PathLossModel(it.toDouble())) }
+        sample.locationPayload
+            ?.let { LocationPayload.decode(it, beacon.secret, payload.rotatingId) }
+            ?.let { locations[beacon.id] = ReceivedLocation(it, SystemClock.elapsedRealtime()) }
         return sample.advertisement.copy(id = beacon.id, name = beacon.name)
     }
 
@@ -167,5 +198,6 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
         const val REFRESH_INTERVAL_MS = 500L
         const val RETRY_DELAY_MS = 6_000L
         const val STOP_TIMEOUT_MS = 5_000L
+        const val OWN_LOCATION_INTERVAL_MS = 5_000L
     }
 }

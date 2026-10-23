@@ -22,13 +22,14 @@ data class AdvertisementDetails(
 )
 
 /**
- * Resultado de escaneo: anuncio para el dominio, contenido en crudo y, si existe, el Service Data
- * del faro Localizator.
+ * Resultado de escaneo: anuncio para el dominio, contenido en crudo y, si existen, el Service Data
+ * del faro Localizator y el de su ubicación cifrada (respuesta de escaneo).
  */
 class ScanSample(
     val advertisement: Advertisement,
     val details: AdvertisementDetails,
     val beaconPayload: ByteArray?,
+    val locationPayload: ByteArray? = null,
 )
 
 private const val BASE_UUID_SUFFIX = "-0000-1000-8000-00805f9b34fb"
