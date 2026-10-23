@@ -34,11 +34,12 @@ ejecución hay que desinstalar antes la versión anterior.
 | Permiso | Versiones | Uso |
 |---|---|---|
 | `BLUETOOTH`, `BLUETOOTH_ADMIN` | ≤ 30 | BLE heredado |
-| `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` | ≤ 30 | Requisito de escaneo BLE en Android ≤ 11. Lint (`CoarseFineLocation`) exige declarar ambos; en ejecución se solicita `FINE`. |
+| `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` | todas | Escaneo BLE en Android ≤ 11; compartir ubicación (protegido) y mostrarla en el mapa (buscador). Se solicitan al activar cada función |
 | `BLUETOOTH_SCAN` (`neverForLocation`) | ≥ 31 | Escaneo |
 | `BLUETOOTH_ADVERTISE` | ≥ 31 | Faro del modo protegido |
 | `BLUETOOTH_CONNECT` | ≥ 31 | Activar Bluetooth, GATT |
-| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE` | todas / ≥ 34 | `ProtectionService` |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `FOREGROUND_SERVICE_LOCATION` | todas / ≥ 34 | `ProtectionService` (`connectedDevice`, más `location` al compartir ubicación) |
+| `INTERNET`, `ACCESS_NETWORK_STATE` | todas | Descarga de mosaicos de OpenStreetMap |
 | `POST_NOTIFICATIONS` | ≥ 33 | Notificación del modo protegido (se pide al activarlo; sin ella el faro funciona igual) |
 | `VIBRATE` | todas | Pulsos de proximidad en el radar |
 | `CAMERA` | todas | Escanear el QR; la declara y la solicita ZXing (`zxing-android-embedded`) |
@@ -67,14 +68,17 @@ app/src/main/kotlin/io/localizator/app/
 │   ├── ProtectionRepository     Secreto, nombre, interruptor y consentimiento propios
 │   └── PairedBeaconsRepository  Teléfonos emparejados
 ├── service/ProtectionService    Foreground service que emite el faro
+├── location/LocationSource  Fused Location Provider (Play Services)
 ├── qr/QrCodes               Generar y leer QR (ZXing)
 ├── sensors/
+│   ├── BatteryMonitor       Nivel y carga desde ACTION_BATTERY_CHANGED
 │   ├── CompassProvider      Azimut desde TYPE_ROTATION_VECTOR
 │   └── Haptics              Pulsos de vibración
 └── ui/
     ├── theme/Theme.kt       LocalizatorTheme (color dinámico en Android 12+)
     ├── home/HomeScreen.kt   Estado de permisos y Bluetooth; muestra MainScreen si está listo
-    ├── main/MainScreen.kt   Navegación inferior: Buscar / Proteger; radar dentro de Buscar
+    ├── main/MainScreen.kt   Navegación inferior: Buscar / Proteger; radar y mapa dentro de Buscar
+    ├── map/MapScreen.kt     Mapa OpenStreetMap: círculo GPS, anillo BLE y posición estimada
     ├── radar/RadarScreen.kt Búsqueda precisa de un teléfono emparejado
     ├── nearby/
     │   ├── NearbyViewModel  Escaneo + reconocimiento de faros + DeviceTracker + NearbyFilter
@@ -85,7 +89,7 @@ app/src/main/kotlin/io/localizator/app/
         └── ProtectScreen    Nombre, interruptor, consentimiento, QR y copia de respaldo
 ```
 
-El protocolo del faro y los flujos están en [`FARO.md`](FARO.md); el radar, en [`RADAR.md`](RADAR.md).
+El protocolo del faro y los flujos están en [`FARO.md`](FARO.md); el radar, en [`RADAR.md`](RADAR.md); la ubicación por GPS, en [`UBICACION.md`](UBICACION.md).
 
 ### `ble.BluetoothPermissions`
 
@@ -204,7 +208,7 @@ portapapeles.
 ### `data.ProtectionRepository`
 
 `SharedPreferences` `protection`: `secret` (Base64, se genera en el primer acceso), `name` (por
-defecto `Build.MODEL`), `enabled` y `consent`. Expone `state: StateFlow<ProtectionState>`.
+defecto `Build.MODEL`), `enabled`, `consent` y `share_location` (por defecto `false`). Expone `state: StateFlow<ProtectionState>`.
 
 ### `data.PairedBeaconsRepository`
 
@@ -288,3 +292,42 @@ en Android 12+ y `Vibrator` en versiones anteriores. No hace nada sin vibrador.
 | Sin señal | Conserva la última estimación con el color `outline` y muestra "Señal perdida" |
 | Vibración | Pulso de 30 ms cada `ProximityFeedback.pulseIntervalMs(distancia)` mientras haya señal y el interruptor esté activo |
 | Atrás | `BackHandler` y el botón ← vuelven a la lista |
+
+### Ubicación compartida (protegido)
+
+`ProtectionService` combina `BatteryMonitor` con `BatteryPolicy` y, si `share_location` está activo
+y hay permiso, solicita posiciones a `LocationSource` con el intervalo y la prioridad del modo:
+
+| `PowerMode` | GPS | Anuncio |
+|---|---|---|
+| `NORMAL` | 30 s, `PRIORITY_HIGH_ACCURACY` | `ADVERTISE_MODE_BALANCED` |
+| `SAVING` | 5 min, `PRIORITY_BALANCED_POWER_ACCURACY` | `ADVERTISE_MODE_BALANCED` |
+| `CRITICAL` | Apagado (se mantiene la última posición) | `ADVERTISE_MODE_LOW_POWER` |
+
+Con una posición disponible, el anuncio lleva una respuesta de escaneo
+(`LocationPayload.SERVICE_UUID → LocationPayload.encode(...)`) y se reinicia con cada posición
+nueva, con cada cambio de modo y al menos cada 60 s (antigüedad), incrementando la secuencia. El
+tipo de foreground service incluye `location` solo si se comparte ubicación con permiso; si el
+sistema lo rechaza, el servicio continúa como `connectedDevice`.
+
+### Ubicación recibida (buscador)
+
+`ScanSample.locationPayload = scanRecord.getServiceData(LocationPayload.SERVICE_UUID)`. Si el
+anuncio del mismo resultado coincide con un teléfono emparejado, `NearbyViewModel` descifra la
+ubicación con su secreto y el ID rotativo del anuncio, y la guarda como
+`ReceivedLocation(location, receivedAtMs)`. Se expone en `MyPhone.location` y se conserva aunque el
+teléfono deje de detectarse. `ageSeconds(now)` suma la antigüedad anunciada y el tiempo desde la
+recepción.
+
+### `ui.map.MapScreen`
+
+| Elemento | Origen |
+|---|---|
+| Mapa | osmdroid, `TileSourceFactory.MAPNIK`, zoom inicial 19, caché en `cache/osmdroid`; `userAgentValue = packageName` |
+| Posición propia | `NearbyViewModel.ownLocationUpdates()` (5 s, alta precisión); solicita permiso de ubicación al abrir |
+| Círculo GPS (azul) | `MyPhone.location`: centro y radio = precisión |
+| Anillo BLE (naranja) | Centro en la posición propia, radio exterior `distanceMax`, hueco `distanceMin` |
+| Posición estimada | `LocationFusion.fuse(...)`, solo si es `consistent` |
+| Resumen | GPS (precisión y antigüedad), Bluetooth (rango) y "~d m hacia el <rumbo de 8 puntos>", o aviso de inconsistencia |
+
+El radar abre el mapa con *Mapa*; *Atrás* vuelve al radar.
