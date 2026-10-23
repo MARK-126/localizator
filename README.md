@@ -4,6 +4,7 @@ App Android para **encontrar teléfonos perdidos a corta distancia** (por ejempl
 recital) usando Bluetooth Low Energy, priorizando la precisión.
 
 - Arquitectura y decisiones de diseño: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Cuaderno de aprendizaje (conceptos y preguntas): [`docs/APRENDIZAJE.md`](docs/APRENDIZAJE.md)
 - Faro y emparejamiento: [`docs/FARO.md`](docs/FARO.md)
 - Búsqueda precisa (radar): [`docs/RADAR.md`](docs/RADAR.md)
 - Ubicación aproximada (mapa): [`docs/UBICACION.md`](docs/UBICACION.md)
