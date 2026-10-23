@@ -185,7 +185,42 @@ Cada sección indica la fase en la que apareció. Se amplía con cada fase nueva
 
 ---
 
-## 6. Android
+## 6. Búsqueda en grupo
+
+### Conceptos
+
+| Concepto | En pocas palabras |
+|---|---|
+| **Multilateración** | Trilateración con más de tres distancias: se busca el punto que mejor encaja con todas, aunque ninguna sea exacta |
+| **Mínimos cuadrados ponderados** | Elegir el punto que minimiza la suma de errores al cuadrado, dando más peso a las mediciones más fiables (`peso = 1/σ²`) |
+| **GDOP** (dilución geométrica de la precisión) | Cuánto amplifica la geometría el error. Nodos repartidos alrededor: GDOP bajo. Nodos juntos o en fila: GDOP alto |
+| **Jerarquía de claves** | Derivar claves "hijas" de un secreto "padre": se puede entregar una hija sin revelar al padre ni a sus hermanas |
+| **Clave horaria** | Clave hija válida para una hora. Entregar 24 claves horarias da acceso exactamente durante 24 h |
+| **Red P2P** (Nearby Connections) | Teléfonos que se comunican directamente por Bluetooth y Wi-Fi, sin internet ni servidor |
+
+### Preguntas
+
+**Tres amigos están juntos en la misma esquina y miden 10 m, 10 m y 11 m. ¿Por qué no alcanza para ubicar el teléfono?** *(fase 11)*
+
+> Porque los tres círculos tienen casi el mismo centro: se superponen en una franja larga en lugar de
+> cortarse en un punto. Es un GDOP alto. Más nodos en el mismo lugar no ayudan; lo que ayuda es que se
+> **separen** alrededor de la zona.
+
+**¿Por qué a los amigos se les entregan claves horarias y no el secreto con una fecha de vencimiento?** *(fase 11)*
+
+> Una fecha de vencimiento solo la respeta una app que se porte bien; quien tiene el secreto puede
+> seguir reconociendo el faro con una app modificada. Con claves horarias, después de 24 h **no tiene
+> con qué** calcular los IDs nuevos: el límite lo impone la matemática, no la app.
+
+**Si un amigo tiene un GPS de ±15 m, ¿conviene darle el mismo peso que a uno de ±4 m?** *(fase 11)*
+
+> No. Su círculo está mal centrado, así que su medición debe pesar menos: `σ` combina el error de la
+> distancia Bluetooth y el del GPS del nodo, y el peso es `1/σ²` (un nodo con el doble de error pesa
+> la cuarta parte).
+
+---
+
+## 7. Android
 
 ### Conceptos
 
@@ -201,7 +236,7 @@ Cada sección indica la fase en la que apareció. Se amplía con cada fase nueva
 
 ---
 
-## 7. Flujo de trabajo
+## 8. Flujo de trabajo
 
 ### Conceptos
 
@@ -232,6 +267,10 @@ Cada sección indica la fase en la que apareció. Se amplía con cada fase nueva
 | AES-CTR | [Modos de operación: CTR](https://es.wikipedia.org/wiki/Modos_de_operaci%C3%B3n_de_una_unidad_de_cifrado_por_bloques) |
 | Estadística direccional | [Estadística direccional](https://es.wikipedia.org/wiki/Estad%C3%ADstica_direccional) |
 | Trilateración | [Trilateración](https://es.wikipedia.org/wiki/Trilateraci%C3%B3n) |
+| Mínimos cuadrados | [Mínimos cuadrados](https://es.wikipedia.org/wiki/M%C3%ADnimos_cuadrados) |
+| GDOP | [Dilution of precision](https://en.wikipedia.org/wiki/Dilution_of_precision_(navigation)) |
+| Red sin internet | [Nearby Connections](https://developers.google.com/nearby/connections/overview) |
+| Derivación de claves | [HKDF (RFC 5869)](https://datatracker.ietf.org/doc/html/rfc5869) |
 | Haversine | [Fórmula del semiverseno](https://es.wikipedia.org/wiki/F%C3%B3rmula_del_semiverseno) |
 | Sensores de Android | [Position sensors](https://developer.android.com/develop/sensors-and-location/sensors/sensors_position) |
 | Foreground services | [Foreground services](https://developer.android.com/develop/background-work/services/fgs) |
