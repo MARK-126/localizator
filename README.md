@@ -10,6 +10,7 @@ recital) usando Bluetooth Low Energy, priorizando la precisión.
 - Ubicación aproximada (mapa): [`docs/UBICACION.md`](docs/UBICACION.md)
 - Módulos: [`docs/CORE.md`](docs/CORE.md), [`docs/APP.md`](docs/APP.md)
 - CI y control de merges: [`docs/CI.md`](docs/CI.md)
+- Seguridad (revisiones y mejoras pendientes): [`docs/SEGURIDAD.md`](docs/SEGURIDAD.md)
 
 ## Flujo de trabajo
 
