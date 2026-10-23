@@ -18,7 +18,7 @@ gradle :core:test
 |---|---|
 | `io.localizator.core.signal` | `PathLossModel`, `KalmanFilter`, `TrendDetector`, `Trend` |
 | `io.localizator.core.calibration` | `Calibrator` |
-| `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource`, `Manufacturers`, `DeviceCategory`, `NearbyFilter` |
+| `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource`, `Manufacturers`, `DeviceCategory`, `NearbyFilter`, `DeviceNames` |
 
 ## Flujo de datos
 
@@ -98,7 +98,7 @@ Mantiene un estado por `Advertisement.id`. Es thread-safe (`@Synchronized`).
 
 | Método | Descripción |
 |---|---|
-| `onAdvertisement(adv)` | Actualiza filtro y tendencia; devuelve `DeviceEstimate`. Los campos `name`, `txPower` y `manufacturerId` nulos conservan el último valor. |
+| `onAdvertisement(adv)` | Actualiza filtro y tendencia; devuelve `DeviceEstimate`. Los campos `name`, `txPower`, `manufacturerId`, `manufacturerIds` y `category` ausentes conservan el último valor. |
 | `snapshot(now)` | Descarta los estados con `now − lastSeen > staleAfterMs` (10 s) y devuelve el resto ordenado por distancia. |
 | `estimateFor(id)` | Estimación actual o `null`. |
 | `setCalibration(id, model)` / `clearCalibration(id)` | Calibración por dispositivo. |
@@ -134,17 +134,23 @@ emparejados). `DeviceTracker` conserva la última categoría distinta de `UNKNOW
 | `maxDistanceMeters` | 30 m | Descarta `distanceMeters > max` |
 | `androidPhonesOnly` | `false` | Solo deja los que cumplen `isLikelyAndroidPhone()` |
 
-`DeviceEstimate.isLikelyAndroidPhone()` es heurístico:
+`DeviceEstimate.isLikelyAndroidPhone()` es heurístico y evalúa **todos** los fabricantes del
+anuncio (`manufacturerIds`), no solo el primero:
 
 | `category` | Resultado |
 |---|---|
-| `PHONE` | `manufacturerId != APPLE` |
+| `PHONE` | `APPLE ∉ manufacturerIds` |
 | `OTHER` | `false` |
-| `UNKNOWN` | `manufacturerId ∈ {SAMSUNG, GOOGLE}` |
+| `UNKNOWN` | `manufacturerIds ∩ {SAMSUNG, GOOGLE} ≠ ∅` |
 
 Admite falsos positivos (otros dispositivos Samsung o Google, como auriculares, relojes o
 televisores) y falsos negativos (teléfonos que no anuncian fabricante). La identificación exacta
 requiere el faro propio.
+
+## `tracking.DeviceNames`
+
+`sanitize(raw: String?)`: recorta los espacios de los extremos. Devuelve `null` si el resultado
+queda vacío o contiene caracteres de control o `U+FFFD` (bytes no decodificables como UTF-8).
 
 ## Cobertura de tests
 
@@ -155,5 +161,6 @@ requiere el faro propio.
 | `TrendDetector` | Acercamiento, alejamiento y señal estable |
 | `Calibrator` | Ajuste con 1 punto, recuperación de P1m y n con 2 puntos y ruido, muestras insuficientes |
 | `Manufacturers` | Fabricantes conocidos, desconocidos y nulos, etiqueta hexadecimal |
-| `NearbyFilter` | Distancia máxima, filtro Android, heurística por categoría y fabricante |
+| `NearbyFilter` | Distancia máxima, filtro Android, heurística por categoría y fabricante, fabricantes no iniciales |
+| `DeviceNames` | Recorte, vacíos y nulos, bytes no decodificables y caracteres de control |
 | `DeviceTracker` | Error filtrado < ½ del crudo y < 0,5 m (3 m, σ = 5 dB), prioridad de modelo, intervalo más estrecho al calibrar, purga y orden, persistencia del nombre y de la categoría |

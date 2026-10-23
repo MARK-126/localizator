@@ -55,13 +55,15 @@ app/src/main/kotlin/io/localizator/app/
 ├── ble/
 │   ├── BluetoothPermissions Permisos de ejecución por versión; allGranted()
 │   ├── BluetoothState       UNSUPPORTED/OFF/ON; rememberBluetoothState()
-│   └── BleScanner           Escaneo BLE como Flow<Advertisement>
+│   ├── BleScanner           Escaneo BLE como Flow<ScanSample>
+│   └── AdvertisementDetails Contenido en crudo de un anuncio (diagnóstico)
 └── ui/
     ├── theme/Theme.kt       LocalizatorTheme (color dinámico en Android 12+)
     ├── home/HomeScreen.kt   Estado de permisos y Bluetooth; muestra NearbyScreen si está listo
     └── nearby/
         ├── NearbyViewModel  Escaneo + DeviceTracker + NearbyFilter → StateFlow<NearbyUiState>
-        └── NearbyScreen     Lista de dispositivos cercanos
+        ├── NearbyScreen     Lista de dispositivos cercanos
+        └── DeviceDetailsDialog  Detalle en crudo de un dispositivo, copiable
 ```
 
 ### `ble.BluetoothPermissions`
@@ -91,7 +93,7 @@ Los permisos se vuelven a evaluar en cada `ON_RESUME`, por ejemplo al volver de 
 
 ### `ble.BleScanner`
 
-`scan(): Flow<Advertisement>`, un *cold flow*: el escaneo empieza al colectar y se detiene al
+`scan(): Flow<ScanSample>`, un *cold flow*: el escaneo empieza al colectar y se detiene al
 cancelar la colección.
 
 | Ajuste | Valor |
@@ -106,12 +108,23 @@ Conversión de `ScanResult` a `Advertisement`:
 | Campo | Origen |
 |---|---|
 | `id` | `device.address` |
-| `name` | `scanRecord.deviceName`, o `device.name` si no viene en el anuncio |
+| `name` | `DeviceNames.sanitize(scanRecord.deviceName ?: device.name)` |
 | `rssi` | `rssi` |
 | `txPower` | `scanRecord.txPowerLevel`; `null` si vale `Int.MIN_VALUE` |
 | `timestampMs` | `timestampNanos / 10⁶` (base `elapsedRealtime`) |
 | `manufacturerId` | Primera clave de `manufacturerSpecificData` |
+| `manufacturerIds` | Todas las claves de `manufacturerSpecificData` |
 | `category` | `device.bluetoothClass.majorDeviceClass`: `PHONE` → `PHONE`; `UNCATEGORIZED` o ausente → `UNKNOWN`; otra → `OTHER` |
+
+`ScanSample.details` (`AdvertisementDetails`):
+
+| Campo | Origen |
+|---|---|
+| `manufacturerData` | Company ID → datos en hexadecimal |
+| `serviceUuids` | `scanRecord.serviceUuids`; `0xXXXX` si deriva del Base UUID con 16 bits |
+| `serviceData` | `scanRecord.serviceData`, UUID → datos en hexadecimal |
+| `connectable` | `ScanResult.isConnectable` |
+| `rawBytes` | `scanRecord.bytes` en hexadecimal |
 
 Errores que terminan el flujo: `SecurityException` (faltan permisos), `IllegalStateException`
 (Bluetooth no disponible) y `ScanFailedException(errorCode)` (`onScanFailed`).
@@ -125,8 +138,11 @@ Errores que terminan el flujo: `SecurityException` (faltan permisos), `IllegalSt
 | `devices` | Dispositivos que pasan `filter`, ordenados por distancia ascendente |
 | `totalCount` | Dispositivos detectados antes de filtrar |
 | `filter` | `NearbyFilter` actual |
+| `selected` | `SelectedDevice(estimate, details)` del dispositivo abierto, o `null` |
 
-Acciones: `setMaxDistance(meters)` y `setAndroidPhonesOnly(enabled)`. Un cambio de filtro se
+Acciones: `setMaxDistance(meters)`, `setAndroidPhonesOnly(enabled)` y `select(id)`
+(`null` cierra el detalle). Los `AdvertisementDetails` se guardan por dispositivo y se descartan
+con el snapshot. Un cambio de filtro se
 aplica de inmediato sobre el último snapshot.
 
 | Parámetro | Valor | Descripción |
@@ -150,5 +166,14 @@ visible (estado `STARTED`).
 | Título | `name`, o el fabricante, o "Dispositivo desconocido" |
 | Subtítulo | Fabricante (si el título es el nombre) · MAC |
 | Detalle | RSSI filtrado (dBm) · zona de proximidad |
-| Distancia | `distanceMeters` + tendencia (`↑` acercando, `↓` alejando, `•` estable) |
+| Distancia | `distanceMeters` + tendencia (`↑` acercando, `↓` alejando, `•` estable); `< 0.1 m` por debajo de 0,1 m |
 | Rango | `distanceMinMeters – distanceMaxMeters` |
+
+Al tocar una fila se abre `DeviceDetailsDialog`.
+
+### `ui.nearby.DeviceDetailsDialog`
+
+Informe en texto monoespaciado, una clave por línea: `mac`, `name`, `category`, `rssi`,
+`distance`, `model`, `trend`, `samples`, `connectable`, `manufacturer …`, `service`,
+`service data …` y `raw`. Se actualiza con cada snapshot. **Copiar** lleva el informe al
+portapapeles.
