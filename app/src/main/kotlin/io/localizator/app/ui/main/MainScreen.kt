@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import io.localizator.app.R
+import io.localizator.app.ui.calibration.CalibrationScreen
 import io.localizator.app.ui.map.MapScreen
 import io.localizator.app.ui.nearby.NearbyScreen
 import io.localizator.app.ui.protect.ProtectScreen
@@ -31,13 +32,15 @@ private enum class Tab(@StringRes val label: Int, val icon: ImageVector) {
 
 /**
  * Pantalla principal con navegación inferior entre [NearbyScreen] y [ProtectScreen]. Dentro de
- * *Buscar*, abrir un teléfono muestra [RadarScreen] y, desde él, [MapScreen]; *Atrás* vuelve un nivel.
+ * *Buscar*, abrir un teléfono muestra [RadarScreen] y, desde él, [MapScreen] o [CalibrationScreen];
+ * *Atrás* vuelve un nivel.
  */
 @Composable
 fun MainScreen() {
     var tab by rememberSaveable { mutableStateOf(Tab.SEARCH) }
     var radarPhoneId by rememberSaveable { mutableStateOf<String?>(null) }
     var mapPhoneId by rememberSaveable { mutableStateOf<String?>(null) }
+    var calibrationPhoneId by rememberSaveable { mutableStateOf<String?>(null) }
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -54,14 +57,21 @@ fun MainScreen() {
     ) { padding ->
         when (tab) {
             Tab.SEARCH -> {
+                val calibrationId = calibrationPhoneId
                 val mapId = mapPhoneId
                 val radarId = radarPhoneId
                 when {
+                    calibrationId != null -> CalibrationScreen(
+                        calibrationId,
+                        onDone = { calibrationPhoneId = null },
+                        modifier = Modifier.padding(padding),
+                    )
                     mapId != null -> MapScreen(mapId, onBack = { mapPhoneId = null }, modifier = Modifier.padding(padding))
                     radarId != null -> RadarScreen(
                         radarId,
                         onBack = { radarPhoneId = null },
                         onOpenMap = { mapPhoneId = it },
+                        onOpenCalibration = { calibrationPhoneId = it },
                         modifier = Modifier.padding(padding),
                     )
                     else -> NearbyScreen(onOpenRadar = { radarPhoneId = it }, modifier = Modifier.padding(padding))
