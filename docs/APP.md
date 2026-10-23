@@ -34,7 +34,7 @@ ejecución hay que desinstalar antes la versión anterior.
 | Permiso | Versiones | Uso |
 |---|---|---|
 | `BLUETOOTH`, `BLUETOOTH_ADMIN` | ≤ 30 | BLE heredado |
-| `ACCESS_FINE_LOCATION` | ≤ 30 | Requisito de escaneo BLE en Android ≤ 11 |
+| `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` | ≤ 30 | Requisito de escaneo BLE en Android ≤ 11. Lint (`CoarseFineLocation`) exige declarar ambos; en ejecución se solicita `FINE`. |
 | `BLUETOOTH_SCAN` (`neverForLocation`) | ≥ 31 | Escaneo |
 | `BLUETOOTH_ADVERTISE` | ≥ 31 | Faro del modo protegido |
 | `BLUETOOTH_CONNECT` | ≥ 31 | Activar Bluetooth, GATT |
