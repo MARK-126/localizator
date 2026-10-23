@@ -18,7 +18,7 @@ gradle :core:test
 |---|---|
 | `io.localizator.core.signal` | `PathLossModel`, `KalmanFilter`, `TrendDetector`, `Trend` |
 | `io.localizator.core.calibration` | `Calibrator` |
-| `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource`, `Manufacturers` |
+| `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource`, `Manufacturers`, `DeviceCategory`, `NearbyFilter` |
 
 ## Flujo de datos
 
@@ -119,7 +119,32 @@ Tabla de Company Identifiers del Bluetooth SIG.
 | `labelOf(id: Int)` | Nombre, o el identificador en hexadecimal (`0x01AB`) |
 
 Fabricantes incluidos: Microsoft `0x0006`, Apple `0x004C`, Samsung `0x0075`, Garmin `0x0087`,
-Bose `0x009E`, Google `0x00E0`, Sony `0x012D`.
+Bose `0x009E`, Google `0x00E0`, Sony `0x012D`. Constantes públicas: `APPLE`, `SAMSUNG`, `GOOGLE`.
+
+## `tracking.DeviceCategory`
+
+Tipo de dispositivo según la *Major Device Class* de Bluetooth: `PHONE` (`0x0200`), `OTHER` (otra
+clase conocida) y `UNKNOWN` (sin Class of Device, lo habitual en dispositivos solo-BLE no
+emparejados). `DeviceTracker` conserva la última categoría distinta de `UNKNOWN`.
+
+## `tracking.NearbyFilter`
+
+| Propiedad | Por defecto | Efecto |
+|---|---|---|
+| `maxDistanceMeters` | 30 m | Descarta `distanceMeters > max` |
+| `androidPhonesOnly` | `false` | Solo deja los que cumplen `isLikelyAndroidPhone()` |
+
+`DeviceEstimate.isLikelyAndroidPhone()` es heurístico:
+
+| `category` | Resultado |
+|---|---|
+| `PHONE` | `manufacturerId != APPLE` |
+| `OTHER` | `false` |
+| `UNKNOWN` | `manufacturerId ∈ {SAMSUNG, GOOGLE}` |
+
+Admite falsos positivos (otros dispositivos Samsung o Google, como auriculares, relojes o
+televisores) y falsos negativos (teléfonos que no anuncian fabricante). La identificación exacta
+requiere el faro propio.
 
 ## Cobertura de tests
 
@@ -130,4 +155,5 @@ Bose `0x009E`, Google `0x00E0`, Sony `0x012D`.
 | `TrendDetector` | Acercamiento, alejamiento y señal estable |
 | `Calibrator` | Ajuste con 1 punto, recuperación de P1m y n con 2 puntos y ruido, muestras insuficientes |
 | `Manufacturers` | Fabricantes conocidos, desconocidos y nulos, etiqueta hexadecimal |
-| `DeviceTracker` | Error filtrado < ½ del crudo y < 0,5 m (3 m, σ = 5 dB), prioridad de modelo, intervalo más estrecho al calibrar, purga y orden, persistencia del nombre |
+| `NearbyFilter` | Distancia máxima, filtro Android, heurística por categoría y fabricante |
+| `DeviceTracker` | Error filtrado < ½ del crudo y < 0,5 m (3 m, σ = 5 dB), prioridad de modelo, intervalo más estrecho al calibrar, purga y orden, persistencia del nombre y de la categoría |

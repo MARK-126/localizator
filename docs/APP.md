@@ -60,7 +60,7 @@ app/src/main/kotlin/io/localizator/app/
     ├── theme/Theme.kt       LocalizatorTheme (color dinámico en Android 12+)
     ├── home/HomeScreen.kt   Estado de permisos y Bluetooth; muestra NearbyScreen si está listo
     └── nearby/
-        ├── NearbyViewModel  Escaneo + DeviceTracker → StateFlow<List<DeviceEstimate>>
+        ├── NearbyViewModel  Escaneo + DeviceTracker + NearbyFilter → StateFlow<NearbyUiState>
         └── NearbyScreen     Lista de dispositivos cercanos
 ```
 
@@ -111,13 +111,23 @@ Conversión de `ScanResult` a `Advertisement`:
 | `txPower` | `scanRecord.txPowerLevel`; `null` si vale `Int.MIN_VALUE` |
 | `timestampMs` | `timestampNanos / 10⁶` (base `elapsedRealtime`) |
 | `manufacturerId` | Primera clave de `manufacturerSpecificData` |
+| `category` | `device.bluetoothClass.majorDeviceClass`: `PHONE` → `PHONE`; `UNCATEGORIZED` o ausente → `UNKNOWN`; otra → `OTHER` |
 
 Errores que terminan el flujo: `SecurityException` (faltan permisos), `IllegalStateException`
 (Bluetooth no disponible) y `ScanFailedException(errorCode)` (`onScanFailed`).
 
 ### `ui.nearby.NearbyViewModel`
 
-`devices: StateFlow<List<DeviceEstimate>>`, ordenada por distancia ascendente.
+`uiState: StateFlow<NearbyUiState>`:
+
+| Campo | Contenido |
+|---|---|
+| `devices` | Dispositivos que pasan `filter`, ordenados por distancia ascendente |
+| `totalCount` | Dispositivos detectados antes de filtrar |
+| `filter` | `NearbyFilter` actual |
+
+Acciones: `setMaxDistance(meters)` y `setAndroidPhonesOnly(enabled)`. Un cambio de filtro se
+aplica de inmediato sobre el último snapshot.
 
 | Parámetro | Valor | Descripción |
 |---|---|---|
@@ -134,6 +144,9 @@ visible (estado `STARTED`).
 
 | Elemento | Contenido |
 |---|---|
+| Barra de filtros | Chip "Solo Android" y chips de distancia máxima: 5, 15 y 30 m (por defecto 30) |
+| Contador | "N de M dispositivos" (visibles de detectados) |
+| Estados vacíos | "Buscando…" si no se detectó nada; "Ningún dispositivo coincide" si el filtro lo oculta todo |
 | Título | `name`, o el fabricante, o "Dispositivo desconocido" |
 | Subtítulo | Fabricante (si el título es el nombre) · MAC |
 | Detalle | RSSI filtrado (dBm) · zona de proximidad |
