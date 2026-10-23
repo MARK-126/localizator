@@ -21,8 +21,15 @@ data class AdvertisementDetails(
     val rawBytes: String,
 )
 
-/** Resultado de escaneo: anuncio para el dominio y su contenido en crudo. */
-data class ScanSample(val advertisement: Advertisement, val details: AdvertisementDetails)
+/**
+ * Resultado de escaneo: anuncio para el dominio, contenido en crudo y, si existe, el Service Data
+ * del faro Localizator.
+ */
+class ScanSample(
+    val advertisement: Advertisement,
+    val details: AdvertisementDetails,
+    val beaconPayload: ByteArray?,
+)
 
 private const val BASE_UUID_SUFFIX = "-0000-1000-8000-00805f9b34fb"
 

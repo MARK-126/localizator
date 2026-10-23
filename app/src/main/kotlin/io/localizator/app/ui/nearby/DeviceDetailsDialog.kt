@@ -1,6 +1,7 @@
 package io.localizator.app.ui.nearby
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -17,9 +18,13 @@ import io.localizator.app.R
 import io.localizator.core.tracking.Manufacturers
 import java.util.Locale
 
-/** Detalle de un dispositivo: estimación y contenido en crudo del último anuncio, copiable como texto. */
+/**
+ * Detalle de un dispositivo: estimación y contenido en crudo del último anuncio, copiable como texto.
+ *
+ * @param onForget si no es `null`, muestra la acción "Olvidar" (teléfonos emparejados).
+ */
 @Composable
-fun DeviceDetailsDialog(device: SelectedDevice, onDismiss: () -> Unit) {
+fun DeviceDetailsDialog(device: SelectedDevice, onDismiss: () -> Unit, onForget: (() -> Unit)? = null) {
     val clipboard = LocalClipboardManager.current
     val report = device.report()
     AlertDialog(
@@ -36,7 +41,12 @@ fun DeviceDetailsDialog(device: SelectedDevice, onDismiss: () -> Unit) {
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.details_close)) }
+            Row {
+                if (onForget != null) {
+                    TextButton(onClick = onForget) { Text(stringResource(R.string.forget_confirm)) }
+                }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.details_close)) }
+            }
         },
     )
 }

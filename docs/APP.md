@@ -38,6 +38,9 @@ ejecución hay que desinstalar antes la versión anterior.
 | `BLUETOOTH_SCAN` (`neverForLocation`) | ≥ 31 | Escaneo |
 | `BLUETOOTH_ADVERTISE` | ≥ 31 | Faro del modo protegido |
 | `BLUETOOTH_CONNECT` | ≥ 31 | Activar Bluetooth, GATT |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE` | todas / ≥ 34 | `ProtectionService` |
+| `POST_NOTIFICATIONS` | ≥ 33 | Notificación del modo protegido (se pide al activarlo; sin ella el faro funciona igual) |
+| `CAMERA` | todas | Escanear el QR; la declara y la solicita ZXing (`zxing-android-embedded`) |
 
 `neverForLocation` declara que el escaneo no se usa para derivar la ubicación física, así
 que en Android 12+ no se pide ubicación. Como consecuencia, Android filtra de los resultados
@@ -51,20 +54,33 @@ dispositivos sin BLE.
 
 ```
 app/src/main/kotlin/io/localizator/app/
-├── MainActivity.kt          Punto de entrada; edge-to-edge; HomeScreen
+├── LocalizatorApp.kt        Application: repositorios compartidos (Context.localizatorApp)
+├── MainActivity.kt          Punto de entrada; reanuda ProtectionService si el interruptor está activo
 ├── ble/
 │   ├── BluetoothPermissions Permisos de ejecución por versión; allGranted()
 │   ├── BluetoothState       UNSUPPORTED/OFF/ON; rememberBluetoothState()
 │   ├── BleScanner           Escaneo BLE como Flow<ScanSample>
-│   └── AdvertisementDetails Contenido en crudo de un anuncio (diagnóstico)
+│   ├── AdvertisementDetails Contenido en crudo de un anuncio; ScanSample
+│   └── BeaconAdvertiser     Emisión del faro
+├── data/
+│   ├── ProtectionRepository     Secreto, nombre, interruptor y consentimiento propios
+│   └── PairedBeaconsRepository  Teléfonos emparejados
+├── service/ProtectionService    Foreground service que emite el faro
+├── qr/QrCodes               Generar y leer QR (ZXing)
 └── ui/
     ├── theme/Theme.kt       LocalizatorTheme (color dinámico en Android 12+)
-    ├── home/HomeScreen.kt   Estado de permisos y Bluetooth; muestra NearbyScreen si está listo
-    └── nearby/
-        ├── NearbyViewModel  Escaneo + DeviceTracker + NearbyFilter → StateFlow<NearbyUiState>
-        ├── NearbyScreen     Lista de dispositivos cercanos
-        └── DeviceDetailsDialog  Detalle en crudo de un dispositivo, copiable
+    ├── home/HomeScreen.kt   Estado de permisos y Bluetooth; muestra MainScreen si está listo
+    ├── main/MainScreen.kt   Navegación inferior: Buscar / Proteger
+    ├── nearby/
+    │   ├── NearbyViewModel  Escaneo + reconocimiento de faros + DeviceTracker + NearbyFilter
+    │   ├── NearbyScreen     Mis teléfonos, emparejar y lista de dispositivos
+    │   └── DeviceDetailsDialog  Detalle en crudo de un dispositivo, copiable
+    └── protect/
+        ├── ProtectViewModel Modo protegido
+        └── ProtectScreen    Nombre, interruptor, consentimiento, QR y copia de respaldo
 ```
+
+El protocolo del faro y los flujos están en [`FARO.md`](FARO.md).
 
 ### `ble.BluetoothPermissions`
 
@@ -87,7 +103,7 @@ Estados, evaluados en este orden:
 | Sin BLE | Mensaje de dispositivo no compatible | — |
 | Permisos pendientes | Explicación | `RequestMultiplePermissions`; tras una denegación, también un enlace a los ajustes de la app |
 | Bluetooth desactivado | Aviso | `ACTION_REQUEST_ENABLE` |
-| Listo | `NearbyScreen` | — |
+| Listo | `MainScreen` | — |
 
 Los permisos se vuelven a evaluar en cada `ON_RESUME`, por ejemplo al volver de los ajustes.
 
@@ -127,7 +143,9 @@ Conversión de `ScanResult` a `Advertisement`:
 | `rawBytes` | `scanRecord.bytes` en hexadecimal |
 
 Errores que terminan el flujo: `SecurityException` (faltan permisos), `IllegalStateException`
-(Bluetooth no disponible) y `ScanFailedException(errorCode)` (`onScanFailed`).
+(Bluetooth no disponible, o `STATE_TURNING_OFF`/`STATE_OFF` durante el escaneo) y
+`ScanFailedException(errorCode)` (`onScanFailed`). `NearbyViewModel` reintenta cada 6 s, así que
+el escaneo se reanuda solo al volver a encender el Bluetooth.
 
 ### `ui.nearby.NearbyViewModel`
 
@@ -177,3 +195,63 @@ Informe en texto monoespaciado, una clave por línea: `mac`, `name`, `category`,
 `distance`, `model`, `trend`, `samples`, `connectable`, `manufacturer …`, `service`,
 `service data …` y `raw`. Se actualiza con cada snapshot. **Copiar** lleva el informe al
 portapapeles.
+
+### `data.ProtectionRepository`
+
+`SharedPreferences` `protection`: `secret` (Base64, se genera en el primer acceso), `name` (por
+defecto `Build.MODEL`), `enabled` y `consent`. Expone `state: StateFlow<ProtectionState>`.
+
+### `data.PairedBeaconsRepository`
+
+`SharedPreferences` `paired_beacons`: conjunto de códigos de emparejamiento. Expone
+`beacons: StateFlow<List<PairedBeacon>>`, ordenada por nombre. `add` reemplaza un emparejamiento
+con el mismo ID; `remove(id)` lo elimina.
+
+### `ble.BeaconAdvertiser`
+
+`start(payload)` reinicia el anuncio: legacy, no conectable, `ADVERTISE_MODE_BALANCED`,
+`ADVERTISE_TX_POWER_MEDIUM`, sin límite de tiempo, sin nombre ni TX Power y con Service Data
+`BeaconProtocol.SERVICE_UUID → payload`. Devuelve `false` si faltan permisos o Bluetooth. Los
+rechazos asíncronos (`onStartFailure`) se notifican con `onFailure(errorCode)`.
+
+### `service.ProtectionService`
+
+Foreground service de tipo `connectedDevice`, con una notificación fija (canal `protection`,
+importancia baja) y la acción *Detener*. El bucle de emisión:
+
+| Evento | Acción |
+|---|---|
+| Nueva ventana del ID rotativo | Payload nuevo (`BeaconCodec.encode(RotatingId(...), P1m desconocido)`) y reinicio del anuncio |
+| Bluetooth vuelve a `STATE_ON` | Reinicio inmediato del anuncio (Android lo detiene al apagar el Bluetooth sin notificarlo) |
+| Fallo del emisor | Reintento en ≤ 30 s |
+| Acción *Detener* | `enabled = false` y `stopSelf()` |
+
+Devuelve `START_STICKY`. No se inicia al arrancar el teléfono; `MainActivity` lo reanuda al abrir
+la app si `enabled` es `true` y hay permisos.
+
+### `ScanSample.beaconPayload`
+
+`scanRecord.getServiceData(SERVICE_UUID)`. `NearbyViewModel` lo decodifica y lo compara con
+`BeaconMatcher` (reconstruido al cambiar los emparejados). Si coincide, el anuncio se registra con
+`id = PairedBeacon.id` y `name = PairedBeacon.name`, de modo que la identidad no cambia aunque
+rote la MAC. Si el payload trae P1m, se aplica como calibración de ese ID.
+
+### Emparejar (`NearbyScreen`)
+
+| Opción | Mecanismo |
+|---|---|
+| Escanear QR | `ScanContract` de ZXing (solo QR, sin pitido). `CaptureActivity` se fuerza a vertical en el manifiesto (`tools:replace="screenOrientation"`) |
+| Desde imagen | `PickVisualMedia` (sin permisos) → `QrCodes.loadBitmap` (lado ≤ 1600 px) → `QrCodes.decode` |
+
+El resultado se muestra en un `Toast`: el nombre emparejado o "código no válido". *Mis teléfonos*
+lista los emparejados aunque haya filtros activos. Un teléfono no detectado se olvida tocándolo;
+uno detectado, desde su detalle.
+
+### `ui.protect.ProtectScreen`
+
+| Elemento | Comportamiento |
+|---|---|
+| Nombre | Campo editable; se guarda con *Guardar nombre* o con la acción *Done* del teclado |
+| Interruptor | La primera activación muestra el diálogo de consentimiento; en Android 13+ solicita `POST_NOTIFICATIONS` antes de iniciar el servicio |
+| QR | `QrCodes.encode(PairingCode, 768 px)` |
+| Compartir copia de respaldo | PNG en `cache/qr/`, compartido mediante `FileProvider` (`${applicationId}.files`) con `ACTION_SEND` |

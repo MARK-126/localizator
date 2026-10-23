@@ -6,6 +6,14 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.localizator.app.ble.AdvertisementDetails
 import io.localizator.app.ble.BleScanner
+import io.localizator.app.ble.ScanSample
+import io.localizator.app.localizatorApp
+import io.localizator.core.beacon.BeaconCodec
+import io.localizator.core.beacon.BeaconMatcher
+import io.localizator.core.beacon.PairedBeacon
+import io.localizator.core.beacon.PairingCode
+import io.localizator.core.signal.PathLossModel
+import io.localizator.core.tracking.Advertisement
 import io.localizator.core.tracking.DeviceEstimate
 import io.localizator.core.tracking.DeviceTracker
 import io.localizator.core.tracking.NearbyFilter
@@ -25,30 +33,40 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Estado de [NearbyScreen].
  *
- * @property devices dispositivos que pasan [filter], ordenados por distancia ascendente.
- * @property totalCount dispositivos detectados antes de aplicar [filter].
+ * @property myPhones teléfonos emparejados, detectados o no; no les afecta [filter].
+ * @property devices resto de dispositivos que pasan [filter], ordenados por distancia ascendente.
+ * @property totalCount dispositivos no emparejados detectados antes de aplicar [filter].
  * @property selected dispositivo abierto en el detalle; `null` si no hay ninguno o dejó de detectarse.
  */
 data class NearbyUiState(
+    val myPhones: List<MyPhone> = emptyList(),
     val devices: List<DeviceEstimate> = emptyList(),
     val totalCount: Int = 0,
     val filter: NearbyFilter = NearbyFilter(),
     val selected: SelectedDevice? = null,
 )
 
+/** Teléfono emparejado y su estimación actual (`null` si no se detecta). */
+data class MyPhone(val beacon: PairedBeacon, val estimate: DeviceEstimate?)
+
 /** Dispositivo abierto en el detalle: estimación actual y último anuncio en crudo. */
 data class SelectedDevice(val estimate: DeviceEstimate, val details: AdvertisementDetails?)
 
 /**
- * Dispositivos cercanos filtrados.
+ * Dispositivos cercanos y teléfonos emparejados.
  *
  * Mientras [uiState] tiene suscriptores, escanea y publica `DeviceTracker.snapshot` cada
  * [REFRESH_INTERVAL_MS]. El escaneo se detiene [STOP_TIMEOUT_MS] después del último suscriptor.
  * Si el escaneo falla, se reintenta cada [RETRY_DELAY_MS] (por encima del límite de Android de
  * 5 inicios cada 30 s).
+ *
+ * Un anuncio con payload de faro que coincide con un teléfono emparejado se registra con el ID
+ * estable del emparejamiento ([PairedBeacon.id]) y su nombre, en lugar de la MAC. Si el payload
+ * trae P1m, se usa como calibración de ese teléfono.
  */
 class NearbyViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val pairedRepository = application.localizatorApp.pairedBeacons
     private val scanner = BleScanner(application)
     private val tracker = DeviceTracker()
     private val filter = MutableStateFlow(NearbyFilter())
@@ -63,8 +81,9 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
                     true
                 }
                 .collect { sample ->
-                    details[sample.advertisement.id] = sample.details
-                    tracker.onAdvertisement(sample.advertisement)
+                    val advertisement = resolve(sample)
+                    details[advertisement.id] = sample.details
+                    tracker.onAdvertisement(advertisement)
                 }
         }
         while (isActive) {
@@ -75,14 +94,32 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    val uiState: StateFlow<NearbyUiState> = combine(snapshots, filter, selectedId) { devices, currentFilter, currentSelection ->
+    val uiState: StateFlow<NearbyUiState> = combine(
+        snapshots,
+        filter,
+        selectedId,
+        pairedRepository.beacons,
+    ) { devices, currentFilter, currentSelection, paired ->
+        val byId = devices.associateBy { it.id }
+        val pairedIds = paired.map { it.id }.toSet()
+        val others = devices.filterNot { it.id in pairedIds }
         NearbyUiState(
-            devices = currentFilter.apply(devices),
-            totalCount = devices.size,
+            myPhones = paired.map { MyPhone(it, byId[it.id]) },
+            devices = currentFilter.apply(others),
+            totalCount = others.size,
             filter = currentFilter,
-            selected = devices.firstOrNull { it.id == currentSelection }?.let { SelectedDevice(it, details[it.id]) },
+            selected = byId[currentSelection]?.let { SelectedDevice(it, details[it.id]) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), NearbyUiState())
+
+    @Volatile
+    private var matcher = BeaconMatcher(pairedRepository.beacons.value)
+
+    init {
+        viewModelScope.launch {
+            pairedRepository.beacons.collect { matcher = BeaconMatcher(it) }
+        }
+    }
 
     fun setMaxDistance(meters: Double) = filter.update { it.copy(maxDistanceMeters = meters) }
 
@@ -91,6 +128,23 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
     /** Abre el detalle de [id], o lo cierra con `null`. */
     fun select(id: String?) {
         selectedId.value = id
+    }
+
+    /** Empareja el teléfono del código [text]. Devuelve el emparejado, o `null` si el código no es válido. */
+    fun pair(text: String): PairedBeacon? = PairingCode.parse(text)?.also(pairedRepository::add)
+
+    /** Olvida el teléfono emparejado [id] y cierra su detalle. */
+    fun forget(id: String) {
+        pairedRepository.remove(id)
+        tracker.clearCalibration(id)
+        select(null)
+    }
+
+    private fun resolve(sample: ScanSample): Advertisement {
+        val payload = sample.beaconPayload?.let(BeaconCodec::decode) ?: return sample.advertisement
+        val beacon = matcher.match(payload, System.currentTimeMillis()) ?: return sample.advertisement
+        payload.measuredPowerAt1m?.let { tracker.setCalibration(beacon.id, PathLossModel(it.toDouble())) }
+        return sample.advertisement.copy(id = beacon.id, name = beacon.name)
     }
 
     private companion object {
