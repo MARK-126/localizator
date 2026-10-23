@@ -9,6 +9,7 @@ recital) usando Bluetooth Low Energy, priorizando la precisión.
 - Búsqueda precisa (radar): [`docs/RADAR.md`](docs/RADAR.md)
 - Ubicación aproximada (mapa): [`docs/UBICACION.md`](docs/UBICACION.md)
 - Calibración: [`docs/CALIBRACION.md`](docs/CALIBRACION.md)
+- Búsqueda en grupo (futuro): [`docs/GRUPO.md`](docs/GRUPO.md)
 - Módulos: [`docs/CORE.md`](docs/CORE.md), [`docs/APP.md`](docs/APP.md)
 - CI y control de merges: [`docs/CI.md`](docs/CI.md)
 - Seguridad (revisiones y mejoras pendientes): [`docs/SEGURIDAD.md`](docs/SEGURIDAD.md)
