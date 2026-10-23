@@ -18,6 +18,7 @@ gradle :core:test
 |---|---|
 | `io.localizator.core.signal` | `PathLossModel`, `KalmanFilter`, `TrendDetector`, `Trend` |
 | `io.localizator.core.calibration` | `Calibrator` |
+| `io.localizator.core.beacon` | `BeaconProtocol`, `RotatingId`, `BeaconCodec`, `PairedBeacon`, `PairingCode`, `BeaconMatcher` |
 | `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource`, `Manufacturers`, `DeviceCategory`, `NearbyFilter`, `DeviceNames` |
 
 ## Flujo de datos
@@ -161,6 +162,19 @@ requiere el faro propio.
 `sanitize(raw: String?)`: recorta los espacios de los extremos. Devuelve `null` si el resultado
 queda vacío o contiene caracteres de control o `U+FFFD` (bytes no decodificables como UTF-8).
 
+## Paquete `beacon`
+
+Implementa el protocolo de [`FARO.md`](FARO.md).
+
+| Clase | Responsabilidad |
+|---|---|
+| `BeaconProtocol` | UUID de servicio, tamaños, `WINDOW_MS = 900 000`, `windowOf(epochMs)`, `nextWindowStart(epochMs)` |
+| `RotatingId` | `compute(secret, window) = HMAC-SHA256(secret, int64 BE)[0..8]` |
+| `BeaconCodec` | `encode(id, p1m?)` → 10 bytes; `decode(bytes)` → `BeaconPayload?` (tamaño y versión) |
+| `PairedBeacon` | Secreto (16 bytes) y nombre; `id = "beacon:" + hex(SHA-256(secret)[0..4])`; `newSecret()` |
+| `PairingCode` | `format`/`parse` de `LOCALIZATOR:1:<secreto b64url>:<nombre b64url>` |
+| `BeaconMatcher` | `match(payload, nowEpochMs)`: ventanas `t−1..t+1`, IDs esperados en caché por ventana. No es thread-safe |
+
 ## Cobertura de tests
 
 | Clase | Comportamiento verificado |
@@ -171,6 +185,7 @@ queda vacío o contiene caracteres de control o `U+FFFD` (bytes no decodificable
 | `Calibrator` | Ajuste con 1 punto, recuperación de P1m y n con 2 puntos y ruido, muestras insuficientes |
 | `Manufacturers` | Fabricantes conocidos, desconocidos y nulos, etiqueta hexadecimal |
 | `NearbyFilter` | Distancia máxima, filtro Android, heurística por categoría y fabricante, fabricantes no iniciales |
+| `beacon` | ID rotativo determinista y por ventana, codec (P1m, desconocido, versión y tamaño inválidos), código de emparejamiento (ida y vuelta, acentos, inválidos), reconocimiento con ±1 ventana y faros ajenos |
 | `DeviceCategory` | Conversión de major class (`0x0000` y `0x1F00` → `UNKNOWN`), anuncio real de un Galaxy S25 Ultra pasa el filtro Android |
 | `DeviceNames` | Recorte, vacíos y nulos, bytes no decodificables y caracteres de control |
 | `DeviceTracker` | Error filtrado < ½ del crudo y < 0,5 m (3 m, σ = 5 dB), prioridad de modelo, intervalo más estrecho al calibrar, purga y orden, persistencia del nombre y de la categoría |

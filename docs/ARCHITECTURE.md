@@ -1,6 +1,8 @@
 # Arquitectura — Localizator (MVP)
 
 > Documento vivo. Se actualiza en cada fase si cambia alguna decisión.
+>
+> Diseño detallado del faro y del emparejamiento: [`FARO.md`](FARO.md).
 
 ## 1. Objetivo
 
