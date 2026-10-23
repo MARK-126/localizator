@@ -123,9 +123,18 @@ Bose `0x009E`, Google `0x00E0`, Sony `0x012D`. Constantes públicas: `APPLE`, `S
 
 ## `tracking.DeviceCategory`
 
-Tipo de dispositivo según la *Major Device Class* de Bluetooth: `PHONE` (`0x0200`), `OTHER` (otra
-clase conocida) y `UNKNOWN` (sin Class of Device, lo habitual en dispositivos solo-BLE no
-emparejados). `DeviceTracker` conserva la última categoría distinta de `UNKNOWN`.
+Tipo de dispositivo según la *Major Device Class* de Bluetooth.
+`fromMajorDeviceClass(major: Int?)`:
+
+| Major class | Categoría |
+|---|---|
+| `null`, `0x0000` (Miscellaneous), `0x1F00` (Uncategorized) | `UNKNOWN` |
+| `0x0200` (Phone) | `PHONE` |
+| Cualquier otra | `OTHER` |
+
+Android devuelve `0x0000` cuando no conoce la clase de un dispositivo solo-BLE no emparejado,
+por eso se trata como `UNKNOWN`. `DeviceTracker` conserva la última categoría distinta de
+`UNKNOWN`.
 
 ## `tracking.NearbyFilter`
 
@@ -162,5 +171,6 @@ queda vacío o contiene caracteres de control o `U+FFFD` (bytes no decodificable
 | `Calibrator` | Ajuste con 1 punto, recuperación de P1m y n con 2 puntos y ruido, muestras insuficientes |
 | `Manufacturers` | Fabricantes conocidos, desconocidos y nulos, etiqueta hexadecimal |
 | `NearbyFilter` | Distancia máxima, filtro Android, heurística por categoría y fabricante, fabricantes no iniciales |
+| `DeviceCategory` | Conversión de major class (`0x0000` y `0x1F00` → `UNKNOWN`), anuncio real de un Galaxy S25 Ultra pasa el filtro Android |
 | `DeviceNames` | Recorte, vacíos y nulos, bytes no decodificables y caracteres de control |
 | `DeviceTracker` | Error filtrado < ½ del crudo y < 0,5 m (3 m, σ = 5 dB), prioridad de modelo, intervalo más estrecho al calibrar, purga y orden, persistencia del nombre y de la categoría |

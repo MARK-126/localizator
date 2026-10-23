@@ -1,7 +1,6 @@
 package io.localizator.app.ble
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothClass
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
@@ -89,11 +88,5 @@ private fun ScanResult.toSample(): ScanSample {
 private fun ScanResult.cachedDeviceName(): String? = runCatching { device.name }.getOrNull()
 
 @SuppressLint("MissingPermission")
-private fun ScanResult.deviceCategory(): DeviceCategory {
-    val major = runCatching { device.bluetoothClass?.majorDeviceClass }.getOrNull()
-    return when (major) {
-        null, BluetoothClass.Device.Major.UNCATEGORIZED -> DeviceCategory.UNKNOWN
-        BluetoothClass.Device.Major.PHONE -> DeviceCategory.PHONE
-        else -> DeviceCategory.OTHER
-    }
-}
+private fun ScanResult.deviceCategory(): DeviceCategory =
+    DeviceCategory.fromMajorDeviceClass(runCatching { device.bluetoothClass?.majorDeviceClass }.getOrNull())

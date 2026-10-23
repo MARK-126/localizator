@@ -114,7 +114,7 @@ Conversión de `ScanResult` a `Advertisement`:
 | `timestampMs` | `timestampNanos / 10⁶` (base `elapsedRealtime`) |
 | `manufacturerId` | Primera clave de `manufacturerSpecificData` |
 | `manufacturerIds` | Todas las claves de `manufacturerSpecificData` |
-| `category` | `device.bluetoothClass.majorDeviceClass`: `PHONE` → `PHONE`; `UNCATEGORIZED` o ausente → `UNKNOWN`; otra → `OTHER` |
+| `category` | `DeviceCategory.fromMajorDeviceClass(device.bluetoothClass?.majorDeviceClass)` |
 
 `ScanSample.details` (`AdvertisementDetails`):
 
