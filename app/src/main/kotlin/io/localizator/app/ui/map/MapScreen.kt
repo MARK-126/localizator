@@ -91,6 +91,7 @@ fun MapScreen(
         }
     }
     val own by produceState<Location?>(null, permissionGranted) {
+        value = null
         if (permissionGranted) viewModel.ownLocationUpdates().catch { }.collect { value = it }
     }
     val nowMs by produceState(SystemClock.elapsedRealtime()) {
