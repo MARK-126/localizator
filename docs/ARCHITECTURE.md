@@ -2,7 +2,7 @@
 
 > Documento vivo. Se actualiza en cada fase si cambia alguna decisión.
 >
-> Diseño detallado del faro y del emparejamiento: [`FARO.md`](FARO.md).
+> Diseño detallado del faro y del emparejamiento: [`FARO.md`](FARO.md). Radar: [`RADAR.md`](RADAR.md).
 
 ## 1. Objetivo
 
@@ -179,9 +179,9 @@ adaptadores*.
 | 03 | `feature/03-android-base-ci` | Proyecto Android vacío + permisos + CI | La CI compila el APK |
 | 04 | `feature/04-escaneo-generico` | Lista de dispositivos cercanos con distancia | APK en un teléfono |
 | 05 | `feature/05-faro-y-emparejamiento` | Modo protegido + ID rotativo + QR | 2 teléfonos: B reconoce a A |
-| 06 | `feature/06-busqueda-precisa` | Pantalla de búsqueda: distancia ± error, caliente/frío, vibración | Prueba de campo |
+| 06 | `feature/06-busqueda-precisa` | Radar: círculo de distancia, banda de error, brújula, caliente/frío y vibración ([`RADAR.md`](RADAR.md)) | Prueba de campo |
 | 07 | `feature/07-calibracion` | Asistente de calibración a 1 m y 3 m | Error medido antes y después |
-| 08 | `feature/08-direccion-brujula` | Barrido 360° → flecha de dirección | Prueba de campo |
+| 08 | `feature/08-direccion-brujula` | Barrido de 360° → flecha de dirección sobre la brújula del radar | Prueba de campo |
 | 09 | `feature/09-hacer-sonar` | Conexión GATT autenticada → alarma | 2 teléfonos |
 
 ## 10. Fuera del MVP (futuro)

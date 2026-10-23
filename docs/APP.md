@@ -40,6 +40,7 @@ ejecución hay que desinstalar antes la versión anterior.
 | `BLUETOOTH_CONNECT` | ≥ 31 | Activar Bluetooth, GATT |
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE` | todas / ≥ 34 | `ProtectionService` |
 | `POST_NOTIFICATIONS` | ≥ 33 | Notificación del modo protegido (se pide al activarlo; sin ella el faro funciona igual) |
+| `VIBRATE` | todas | Pulsos de proximidad en el radar |
 | `CAMERA` | todas | Escanear el QR; la declara y la solicita ZXing (`zxing-android-embedded`) |
 
 `neverForLocation` declara que el escaneo no se usa para derivar la ubicación física, así
@@ -67,10 +68,14 @@ app/src/main/kotlin/io/localizator/app/
 │   └── PairedBeaconsRepository  Teléfonos emparejados
 ├── service/ProtectionService    Foreground service que emite el faro
 ├── qr/QrCodes               Generar y leer QR (ZXing)
+├── sensors/
+│   ├── CompassProvider      Azimut desde TYPE_ROTATION_VECTOR
+│   └── Haptics              Pulsos de vibración
 └── ui/
     ├── theme/Theme.kt       LocalizatorTheme (color dinámico en Android 12+)
     ├── home/HomeScreen.kt   Estado de permisos y Bluetooth; muestra MainScreen si está listo
-    ├── main/MainScreen.kt   Navegación inferior: Buscar / Proteger
+    ├── main/MainScreen.kt   Navegación inferior: Buscar / Proteger; radar dentro de Buscar
+    ├── radar/RadarScreen.kt Búsqueda precisa de un teléfono emparejado
     ├── nearby/
     │   ├── NearbyViewModel  Escaneo + reconocimiento de faros + DeviceTracker + NearbyFilter
     │   ├── NearbyScreen     Mis teléfonos, emparejar y lista de dispositivos
@@ -80,7 +85,7 @@ app/src/main/kotlin/io/localizator/app/
         └── ProtectScreen    Nombre, interruptor, consentimiento, QR y copia de respaldo
 ```
 
-El protocolo del faro y los flujos están en [`FARO.md`](FARO.md).
+El protocolo del faro y los flujos están en [`FARO.md`](FARO.md); el radar, en [`RADAR.md`](RADAR.md).
 
 ### `ble.BluetoothPermissions`
 
@@ -244,8 +249,9 @@ rote la MAC. Si el payload trae P1m, se aplica como calibración de ese ID.
 | Desde imagen | `PickVisualMedia` (sin permisos) → `QrCodes.loadBitmap` (lado ≤ 1600 px) → `QrCodes.decode` |
 
 El resultado se muestra en un `Toast`: el nombre emparejado o "código no válido". *Mis teléfonos*
-lista los emparejados aunque haya filtros activos. Un teléfono no detectado se olvida tocándolo;
-uno detectado, desde su detalle.
+lista los emparejados aunque haya filtros activos. Al tocar uno detectado se abre el radar
+(`onOpenRadar`); uno no detectado se olvida tocándolo. Desde el radar, *Detalles* abre el informe
+en crudo, con la opción *Olvidar*.
 
 ### `ui.protect.ProtectScreen`
 
@@ -255,3 +261,30 @@ uno detectado, desde su detalle.
 | Interruptor | La primera activación muestra el diálogo de consentimiento; en Android 13+ solicita `POST_NOTIFICATIONS` antes de iniciar el servicio |
 | QR | `QrCodes.encode(PairingCode, 768 px)` |
 | Compartir copia de respaldo | PNG en `cache/qr/`, compartido mediante `FileProvider` (`${applicationId}.files`) con `ACTION_SEND` |
+
+### `sensors.CompassProvider`
+
+`azimuthDegrees(): Flow<Double>`: `TYPE_ROTATION_VECTOR` a `SENSOR_DELAY_UI` →
+`getRotationMatrixFromVector` → `remapCoordinateSystem` según `Display.rotation` →
+`getOrientation`. Devuelve grados desde el norte magnético, en [0, 360). Si no hay sensor, el flujo
+termina sin emitir (`isAvailable = false`).
+
+`NearbyViewModel.heading: StateFlow<Double?>` aplica `HeadingFilter` y comparte la suscripción
+(`WhileSubscribed(5 s)`): el sensor solo está activo mientras el radar es visible.
+
+### `sensors.Haptics`
+
+`pulse(ms)`: `VibrationEffect.createOneShot` con amplitud por defecto, mediante `VibratorManager`
+en Android 12+ y `Vibrator` en versiones anteriores. No hace nada sin vibrador.
+
+### `ui.radar.RadarScreen`
+
+| Elemento | Comportamiento |
+|---|---|
+| Escala | Primer valor de {1, 2, 5, 10, 20, 30} m ≥ 1,2 × `distanceMaxMeters`; 4 anillos y etiqueta a 45° |
+| Banda | Anillo entre `distanceMinMeters` y `distanceMaxMeters` (α = 0,18) |
+| Círculo | `distanceMeters`, línea discontinua |
+| Brújula | Marcas cada 30° y N/E/S/O en `bearing − heading`: el norte de la pantalla sigue al norte real |
+| Sin señal | Conserva la última estimación con el color `outline` y muestra "Señal perdida" |
+| Vibración | Pulso de 30 ms cada `ProximityFeedback.pulseIntervalMs(distancia)` mientras haya señal y el interruptor esté activo |
+| Atrás | `BackHandler` y el botón ← vuelven a la lista |
