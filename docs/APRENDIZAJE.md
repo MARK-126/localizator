@@ -195,7 +195,7 @@ Cada sección indica la fase en la que apareció. Se amplía con cada fase nueva
 | **Mínimos cuadrados ponderados** | Elegir el punto que minimiza la suma de errores al cuadrado, dando más peso a las mediciones más fiables (`peso = 1/σ²`) |
 | **GDOP** (dilución geométrica de la precisión) | Cuánto amplifica la geometría el error. Nodos repartidos alrededor: GDOP bajo. Nodos juntos o en fila: GDOP alto |
 | **Jerarquía de claves** | Derivar claves "hijas" de un secreto "padre": se puede entregar una hija sin revelar al padre ni a sus hermanas |
-| **Clave horaria** | Clave hija válida para una hora. Entregar 24 claves horarias da acceso exactamente durante 24 h |
+| **Clave horaria** | Clave hija válida para una hora. Entregar las claves de las próximas 24 h da acceso solo durante ese período, con precisión de una hora |
 | **Red P2P** (Nearby Connections) | Teléfonos que se comunican directamente por Bluetooth y Wi-Fi, sin internet ni servidor |
 
 ### Preguntas
@@ -217,6 +217,21 @@ Cada sección indica la fase en la que apareció. Se amplía con cada fase nueva
 > No. Su círculo está mal centrado, así que su medición debe pesar menos: `σ` combina el error de la
 > distancia Bluetooth y el del GPS del nodo, y el peso es `1/σ²` (un nodo con el doble de error pesa
 > la cuarta parte).
+
+**Emparejas a un amigo a las 21:40 con claves por hora. ¿Hasta qué hora exacta te puede encontrar? ¿Qué cambia con claves de 15 min?** *(fase 11)*
+
+> El QR lleva las claves de las horas 21:00 de hoy a 21:00 de mañana (25 claves), y la última vale hasta
+> las 22:00. La app borra el emparejamiento a las 21:40, pero una app modificada podría seguir hasta las
+> 22:00: el límite criptográfico es de 24 a 25 h. Con claves de 15 min el exceso baja a 15 min, pero el
+> QR pasa de 25 a 97 claves (≈ 1,5 KB): más denso y más difícil de leer desde una foto. Es un
+> compromiso entre **precisión del límite** y **tamaño del QR**.
+
+**Te encuentran a las 2 horas. Si cierras la sesión de grupo, ¿tus amigos dejan de poder encontrarte?** *(fase 11)*
+
+> Cerrar la sesión detiene el intercambio de mediciones y le pide a cada app que borre sus claves, pero
+> eso depende de que las apps colaboren: las claves ya entregadas siguen sirviendo hasta caducar. La
+> única revocación real es **cambiar el secreto**, que obliga a reemparejar a todos. Por eso el plazo
+> corto (24 h) es la verdadera protección.
 
 ---
 
