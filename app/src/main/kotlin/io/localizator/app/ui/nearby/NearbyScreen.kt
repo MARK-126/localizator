@@ -52,12 +52,14 @@ import io.localizator.core.tracking.ProximityZone
 import java.util.Locale
 
 /**
- * Búsqueda: sección "Mis teléfonos" (emparejados, sin filtrar) con emparejamiento por cámara o
- * imagen, y lista del resto de dispositivos con filtros de distancia máxima y "solo Android".
+ * Búsqueda: sección "Mis teléfonos" (emparejados, sin filtrar; al tocar uno detectado se invoca
+ * [onOpenRadar]) con emparejamiento por cámara o imagen, y lista del resto de dispositivos con
+ * filtros de distancia máxima y "solo Android".
  * El escaneo solo está activo mientras la pantalla es visible.
  */
 @Composable
 fun NearbyScreen(
+    onOpenRadar: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: NearbyViewModel = viewModel(),
 ) {
@@ -103,7 +105,7 @@ fun NearbyScreen(
             val estimate = phone.estimate
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 if (estimate != null) {
-                    DeviceRow(estimate, onClick = { viewModel.select(estimate.id) })
+                    DeviceRow(estimate, onClick = { onOpenRadar(estimate.id) })
                 } else {
                     UndetectedPhoneRow(phone.beacon, onClick = { forgetCandidate = phone.beacon.id })
                 }
