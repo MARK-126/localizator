@@ -1,15 +1,15 @@
 pluginManagement {
     repositories {
-        gradlePluginPortal()
+        google()
         mavenCentral()
-    }
-    plugins {
-        id("org.jetbrains.kotlin.jvm") version "2.0.21"
+        gradlePluginPortal()
     }
 }
 
 dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        google()
         mavenCentral()
     }
 }
@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 rootProject.name = "localizator"
 
 include(":core")
+include(":app")
