@@ -8,7 +8,17 @@
     <string name="bluetooth_off_title">Bluetooth desactivado</string>
     <string name="bluetooth_off_body">Activa el Bluetooth para buscar dispositivos.</string>
     <string name="bluetooth_enable">Activar Bluetooth</string>
-    <string name="ready_title">Listo</string>
-    <string name="ready_body">Bluetooth activo y permisos concedidos.</string>
     <string name="bluetooth_unsupported">Este dispositivo no tiene Bluetooth Low Energy.</string>
+    <string name="nearby_searching">Buscando dispositivos cercanos…</string>
+    <string name="nearby_unknown_device">Dispositivo desconocido</string>
+    <string name="nearby_rssi">%1$d dBm · %2$s</string>
+    <string name="nearby_range">%1$s – %2$s</string>
+    <plurals name="nearby_count">
+        <item quantity="one">%d dispositivo cercano</item>
+        <item quantity="other">%d dispositivos cercanos</item>
+    </plurals>
+    <string name="zone_immediate">Inmediato</string>
+    <string name="zone_near">Cerca</string>
+    <string name="zone_far">Lejos</string>
+    <string name="zone_unknown">Desconocido</string>
 </resources>

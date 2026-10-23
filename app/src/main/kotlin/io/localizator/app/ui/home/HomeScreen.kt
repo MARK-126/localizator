@@ -33,10 +33,11 @@ import io.localizator.app.R
 import io.localizator.app.ble.BluetoothPermissions
 import io.localizator.app.ble.BluetoothState
 import io.localizator.app.ble.rememberBluetoothState
+import io.localizator.app.ui.nearby.NearbyScreen
 
 /**
  * Pantalla inicial. Muestra, por orden de prioridad: falta de BLE, permisos pendientes,
- * Bluetooth desactivado o estado listo. Los permisos se vuelven a comprobar en cada `ON_RESUME`.
+ * Bluetooth desactivado o [NearbyScreen]. Los permisos se vuelven a comprobar en cada `ON_RESUME`.
  */
 @Composable
 fun HomeScreen() {
@@ -60,42 +61,44 @@ fun HomeScreen() {
     ) {}
 
     Scaffold { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            when {
-                bluetoothState == BluetoothState.UNSUPPORTED ->
-                    StatusMessage(R.string.app_name, R.string.bluetooth_unsupported)
+        if (bluetoothState == BluetoothState.ON && permissionsGranted) {
+            NearbyScreen(modifier = Modifier.padding(padding))
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                when {
+                    bluetoothState == BluetoothState.UNSUPPORTED ->
+                        StatusMessage(R.string.app_name, R.string.bluetooth_unsupported)
 
-                !permissionsGranted -> {
-                    StatusMessage(R.string.permissions_title, R.string.permissions_body)
-                    Button(onClick = { permissionLauncher.launch(BluetoothPermissions.required) }) {
-                        Text(stringResource(R.string.permissions_grant))
+                    !permissionsGranted -> {
+                        StatusMessage(R.string.permissions_title, R.string.permissions_body)
+                        Button(onClick = { permissionLauncher.launch(BluetoothPermissions.required) }) {
+                            Text(stringResource(R.string.permissions_grant))
+                        }
+                        if (permissionsRequested) {
+                            OutlinedButton(onClick = {
+                                context.startActivity(
+                                    Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.fromParts("package", context.packageName, null),
+                                    ),
+                                )
+                            }) {
+                                Text(stringResource(R.string.permissions_settings))
+                            }
+                        }
                     }
-                    if (permissionsRequested) {
-                        OutlinedButton(onClick = {
-                            context.startActivity(
-                                Intent(
-                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                    Uri.fromParts("package", context.packageName, null),
-                                ),
-                            )
-                        }) {
-                            Text(stringResource(R.string.permissions_settings))
+
+                    else -> {
+                        StatusMessage(R.string.bluetooth_off_title, R.string.bluetooth_off_body)
+                        Button(onClick = { enableBluetoothLauncher.launch(enableBluetoothIntent()) }) {
+                            Text(stringResource(R.string.bluetooth_enable))
                         }
                     }
                 }
-
-                bluetoothState == BluetoothState.OFF -> {
-                    StatusMessage(R.string.bluetooth_off_title, R.string.bluetooth_off_body)
-                    Button(onClick = { enableBluetoothLauncher.launch(enableBluetoothIntent()) }) {
-                        Text(stringResource(R.string.bluetooth_enable))
-                    }
-                }
-
-                else -> StatusMessage(R.string.ready_title, R.string.ready_body)
             }
         }
     }
