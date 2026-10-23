@@ -21,14 +21,15 @@ el anillo BLE. Sin posición del buscador, no se muestra el mapa: se usa el rada
 ## Transporte: respuesta de escaneo cifrada
 
 El anuncio del faro no cambia. La ubicación viaja en la **respuesta de escaneo** (scan response,
-31 bytes), que el buscador obtiene con el escaneo activo de Android. Ambos paquetes comparten la
-MAC del anuncio, lo que permite asociarlos.
+31 bytes), que el buscador obtiene con el escaneo activo de Android. Android entrega anuncio y
+respuesta en el mismo `ScanResult`, y `ScanRecord.serviceData` es un mapa por UUID, así que la
+ubicación usa un **UUID propio** para no sobrescribir el Service Data del faro.
 
 ```
 Scan response: AD 0x21 (Service Data, UUID de 128 bits)    2 + 16 + 13 = 31 bytes
-├── UUID  768d753b-11be-48c1-99d7-51df0044d579
+├── UUID  beb58366-ea27-42f2-a4bc-c169eb247e3a
 └── Payload (13 bytes)
-    ├── [0]       tipo = 0x02 (ubicación)
+    ├── [0]       versión = 1
     ├── [1]       secuencia (contador por actualización, módulo 256)
     ├── [2..11]   cifrado (10 bytes):
     │             lat int32 BE (1e-7 °) · lon int32 BE (1e-7 °) ·
@@ -37,10 +38,14 @@ Scan response: AD 0x21 (Service Data, UUID de 128 bits)    2 + 16 + 13 = 31 byte
 ```
 
 - **Clave:** `HMAC-SHA256(secreto, "localizator-ubicacion")[0..16]`.
-- **Cifrado:** AES-128-CTR con IV = `ventana (int64 BE) ‖ secuencia (uint8) ‖ 0…`. Cambiar la
-  secuencia en cada actualización evita reutilizar el flujo de clave dentro de una ventana.
-- Un buscador sin el secreto solo ve bytes aleatorios. El tipo `0x02` distingue este payload del
-  anuncio (versión `0x01`).
+- **Cifrado:** AES-128-CTR con IV = `ID rotativo del anuncio (8 bytes) ‖ secuencia (1 byte) ‖ 0 (7 bytes)`.
+  El ID rotativo cambia en cada ventana y la secuencia en cada actualización, así que el flujo de
+  clave no se reutiliza. El buscador obtiene el ID rotativo del anuncio del mismo `ScanResult`.
+- **Actualización:** el payload se recalcula con cada posición nueva y al menos cada 60 s (para
+  refrescar la antigüedad), incrementando la secuencia.
+- Un buscador sin el secreto solo ve bytes aleatorios.
+- La respuesta se asocia al faro reconocido en el mismo `ScanResult`, y se descifra con el secreto
+  de ese emparejamiento.
 
 ## Frecuencia según batería (protegido)
 
