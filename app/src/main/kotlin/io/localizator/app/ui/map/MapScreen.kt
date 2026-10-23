@@ -90,9 +90,10 @@ fun MapScreen(
             permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         }
     }
-    val own by produceState<Location?>(null, permissionGranted) {
-        value = null
-        if (permissionGranted) viewModel.ownLocationUpdates().catch { }.collect { value = it }
+    var own by remember { mutableStateOf<Location?>(null) }
+    LaunchedEffect(permissionGranted) {
+        own = null
+        if (permissionGranted) viewModel.ownLocationUpdates().catch { }.collect { own = it }
     }
     val nowMs by produceState(SystemClock.elapsedRealtime()) {
         while (true) {
