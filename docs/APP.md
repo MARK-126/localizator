@@ -19,16 +19,11 @@ Aplicación Android con Jetpack Compose. Depende de `:core`.
 
 Requiere el Android SDK (Android Studio o `ANDROID_HOME`).
 
-## CI (`.github/workflows/android.yml`)
+## CI
 
-Se ejecuta en cada `push`, `pull_request` y de forma manual (`workflow_dispatch`).
+Tests, Android Lint y compilación del APK en cada Pull Request. Ver [`CI.md`](CI.md).
 
-1. JDK 17 (Temurin) y caché de Gradle (`gradle/actions/setup-gradle`).
-2. `./gradlew :core:test`
-3. `./gradlew :app:assembleDebug`
-4. Artefactos: `localizator-debug-apk` (APK) y `test-results` (informe HTML de tests).
-
-**Descargar el APK:** pestaña *Actions* → ejecución de la rama → sección *Artifacts* →
+**Descargar el APK:** pestaña *Actions* → ejecución de la PR → *Artifacts* →
 `localizator-debug-apk` (zip con `app-debug.apk`).
 
 Cada ejecución firma el APK con una clave debug distinta. Para instalar un APK de otra
@@ -39,7 +34,7 @@ ejecución hay que desinstalar antes la versión anterior.
 | Permiso | Versiones | Uso |
 |---|---|---|
 | `BLUETOOTH`, `BLUETOOTH_ADMIN` | ≤ 30 | BLE heredado |
-| `ACCESS_FINE_LOCATION` | ≤ 30 | Requisito de escaneo BLE en Android ≤ 11 |
+| `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` | ≤ 30 | Requisito de escaneo BLE en Android ≤ 11. Lint (`CoarseFineLocation`) exige declarar ambos; en ejecución se solicita `FINE`. |
 | `BLUETOOTH_SCAN` (`neverForLocation`) | ≥ 31 | Escaneo |
 | `BLUETOOTH_ADVERTISE` | ≥ 31 | Faro del modo protegido |
 | `BLUETOOTH_CONNECT` | ≥ 31 | Activar Bluetooth, GATT |
