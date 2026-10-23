@@ -12,3 +12,9 @@ recital) usando Bluetooth Low Energy, priorizando la precisión.
 Cada fase se desarrolla en su propia rama `feature/NN-nombre` y llega a `main` mediante una
 Pull Request. La PR solo se puede mergear si la CI está en verde (tests, lint, APK y
 convención de commits).
+
+## Configuración local
+
+Las variables de entorno (claves, tokens, URLs de servicios) van en `.env`, en la raíz del
+proyecto. Git ignora `.env` y `.env.*`. Las variables necesarias se documentan, sin valores,
+en `.env.example`, que sí se versiona.
