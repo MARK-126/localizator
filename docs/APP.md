@@ -54,10 +54,14 @@ app/src/main/kotlin/io/localizator/app/
 ├── MainActivity.kt          Punto de entrada; edge-to-edge; HomeScreen
 ├── ble/
 │   ├── BluetoothPermissions Permisos de ejecución por versión; allGranted()
-│   └── BluetoothState       UNSUPPORTED/OFF/ON; rememberBluetoothState()
+│   ├── BluetoothState       UNSUPPORTED/OFF/ON; rememberBluetoothState()
+│   └── BleScanner           Escaneo BLE como Flow<Advertisement>
 └── ui/
     ├── theme/Theme.kt       LocalizatorTheme (color dinámico en Android 12+)
-    └── home/HomeScreen.kt   Estado de permisos y Bluetooth
+    ├── home/HomeScreen.kt   Estado de permisos y Bluetooth; muestra NearbyScreen si está listo
+    └── nearby/
+        ├── NearbyViewModel  Escaneo + DeviceTracker → StateFlow<List<DeviceEstimate>>
+        └── NearbyScreen     Lista de dispositivos cercanos
 ```
 
 ### `ble.BluetoothPermissions`
@@ -81,6 +85,57 @@ Estados, evaluados en este orden:
 | Sin BLE | Mensaje de dispositivo no compatible | — |
 | Permisos pendientes | Explicación | `RequestMultiplePermissions`; tras una denegación, también un enlace a los ajustes de la app |
 | Bluetooth desactivado | Aviso | `ACTION_REQUEST_ENABLE` |
-| Listo | Confirmación | — |
+| Listo | `NearbyScreen` | — |
 
 Los permisos se vuelven a evaluar en cada `ON_RESUME`, por ejemplo al volver de los ajustes.
+
+### `ble.BleScanner`
+
+`scan(): Flow<Advertisement>`, un *cold flow*: el escaneo empieza al colectar y se detiene al
+cancelar la colección.
+
+| Ajuste | Valor |
+|---|---|
+| Modo | `SCAN_MODE_LOW_LATENCY` |
+| `reportDelay` | 0 (un resultado por anuncio) |
+| Tipo de anuncio | Solo *legacy* (BLE 4.x), compatible con todos los adaptadores |
+| Filtros | Ninguno |
+
+Conversión de `ScanResult` a `Advertisement`:
+
+| Campo | Origen |
+|---|---|
+| `id` | `device.address` |
+| `name` | `scanRecord.deviceName`, o `device.name` si no viene en el anuncio |
+| `rssi` | `rssi` |
+| `txPower` | `scanRecord.txPowerLevel`; `null` si vale `Int.MIN_VALUE` |
+| `timestampMs` | `timestampNanos / 10⁶` (base `elapsedRealtime`) |
+| `manufacturerId` | Primera clave de `manufacturerSpecificData` |
+
+Errores que terminan el flujo: `SecurityException` (faltan permisos), `IllegalStateException`
+(Bluetooth no disponible) y `ScanFailedException(errorCode)` (`onScanFailed`).
+
+### `ui.nearby.NearbyViewModel`
+
+`devices: StateFlow<List<DeviceEstimate>>`, ordenada por distancia ascendente.
+
+| Parámetro | Valor | Descripción |
+|---|---|---|
+| `REFRESH_INTERVAL_MS` | 500 | Periodo de `DeviceTracker.snapshot(elapsedRealtime)` |
+| `STOP_TIMEOUT_MS` | 5000 | `SharingStarted.WhileSubscribed`: el escaneo se detiene 5 s después del último suscriptor |
+| `RETRY_DELAY_MS` | 6000 | Espera antes de reintentar un escaneo fallido (límite de Android: 5 inicios cada 30 s) |
+
+Los dispositivos sin anuncios durante 10 s se descartan (`DeviceTracker.staleAfterMs`).
+
+### `ui.nearby.NearbyScreen`
+
+Se suscribe con `collectAsStateWithLifecycle`, así que el escaneo solo funciona con la pantalla
+visible (estado `STARTED`).
+
+| Elemento | Contenido |
+|---|---|
+| Título | `name`, o el fabricante, o "Dispositivo desconocido" |
+| Subtítulo | Fabricante (si el título es el nombre) · MAC |
+| Detalle | RSSI filtrado (dBm) · zona de proximidad |
+| Distancia | `distanceMeters` + tendencia (`↑` acercando, `↓` alejando, `•` estable) |
+| Rango | `distanceMinMeters – distanceMaxMeters` |

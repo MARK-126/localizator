@@ -18,7 +18,7 @@ gradle :core:test
 |---|---|
 | `io.localizator.core.signal` | `PathLossModel`, `KalmanFilter`, `TrendDetector`, `Trend` |
 | `io.localizator.core.calibration` | `Calibrator` |
-| `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource` |
+| `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource`, `Manufacturers` |
 
 ## Flujo de datos
 
@@ -109,6 +109,18 @@ Mantiene un estado por `Advertisement.id`. Es thread-safe (`@Synchronized`).
 
 **Zonas** (`ProximityZone.fromDistance`): `IMMEDIATE` < 0,5 m ≤ `NEAR` < 2,5 m ≤ `FAR`.
 
+## `tracking.Manufacturers`
+
+Tabla de Company Identifiers del Bluetooth SIG.
+
+| Método | Resultado |
+|---|---|
+| `nameOf(id: Int?)` | Nombre, o `null` si `id` es nulo o no está en la tabla |
+| `labelOf(id: Int)` | Nombre, o el identificador en hexadecimal (`0x01AB`) |
+
+Fabricantes incluidos: Microsoft `0x0006`, Apple `0x004C`, Samsung `0x0075`, Garmin `0x0087`,
+Bose `0x009E`, Google `0x00E0`, Sony `0x012D`.
+
 ## Cobertura de tests
 
 | Clase | Comportamiento verificado |
@@ -117,4 +129,5 @@ Mantiene un estado por `Advertisement.id`. Es thread-safe (`@Synchronized`).
 | `KalmanFilter` | Convergencia con ruido σ = 4 dB, rechazo de pico aislado, seguimiento de un cambio sostenido, reacción en ≤ 1 s a 10 Hz |
 | `TrendDetector` | Acercamiento, alejamiento y señal estable |
 | `Calibrator` | Ajuste con 1 punto, recuperación de P1m y n con 2 puntos y ruido, muestras insuficientes |
+| `Manufacturers` | Fabricantes conocidos, desconocidos y nulos, etiqueta hexadecimal |
 | `DeviceTracker` | Error filtrado < ½ del crudo y < 0,5 m (3 m, σ = 5 dB), prioridad de modelo, intervalo más estrecho al calibrar, purga y orden, persistencia del nombre |
