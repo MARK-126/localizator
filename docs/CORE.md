@@ -201,7 +201,7 @@ Implementa [`UBICACION.md`](UBICACION.md).
 |---|---|
 | `LocationPayload` | `encode(location, secret, rotatingId, sequence)` → 13 bytes; `decode(...)` → `SharedLocation?`. Clave `HMAC-SHA256(secret, "localizator-ubicacion")[0..16]`, AES-128-CTR con IV `rotatingId ‖ seq ‖ 0⁷`. Coordenadas int32 en 1e-7°, precisión en m (≤ 255) y antigüedad en unidades de 10 s (≤ 2550 s). UUID de servicio propio |
 | `Geo` | `distanceMeters` (haversine), `bearingDegrees` (rumbo inicial), `destination(origen, rumbo, distancia)` sobre esfera de radio 6 371 008,8 m |
-| `LocationFusion.fuse` | Punto del anillo BLE (a `distanceMeters`) en el rumbo hacia el centro GPS; `consistent` si `d − precisiónGPS ≤ bleMax` y `d + precisiónGPS ≥ bleMin` |
+| `LocationFusion.fuse` | Punto del anillo BLE (a `distanceMeters`) en el rumbo hacia el centro GPS; `consistent` si `d − precisiónGPS ≤ bleMax` y `d + precisiónGPS ≥ bleMin`; `preferBluetooth` si `bleDistance < precisiónGPS` |
 | `BatteryPolicy` | `modeFor(nivel, cargando)`: `NORMAL` (≥ 30 % o cargando), `SAVING` (15–29 %), `CRITICAL` (< 15 %); `gpsIntervalMs`: 30 s, 5 min o `null` |
 
 ## Cobertura de tests

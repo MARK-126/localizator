@@ -327,7 +327,8 @@ recepción.
 | Posición propia | `NearbyViewModel.ownLocationUpdates()` (5 s, alta precisión); solicita permiso de ubicación al abrir |
 | Círculo GPS (azul) | `MyPhone.location`: centro y radio = precisión |
 | Anillo BLE (naranja) | Centro en la posición propia, radio exterior `distanceMax`, hueco `distanceMin` |
-| Posición estimada | `LocationFusion.fuse(...)`, solo si es `consistent` |
+| Posición estimada | `LocationFusion.fuse(...)`, solo si es `consistent` y no `preferBluetooth` |
+| Cerca | Si `preferBluetooth`: "Estás muy cerca… usa el radar" y botón *Volver al radar* |
 | Resumen | GPS (precisión y antigüedad), Bluetooth (rango) y "~d m hacia el <rumbo de 8 puntos>", o aviso de inconsistencia |
 
 El radar abre el mapa con *Mapa*; *Atrás* vuelve al radar.

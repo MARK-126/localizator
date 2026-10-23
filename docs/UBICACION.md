@@ -15,6 +15,10 @@ restricciones). El punto estimado es el del anillo BLE (a `distanceMeters`) más
 GPS. Si los círculos no se cortan, se muestran los dos sin zona probable y se indica que hay
 inconsistencia (GPS impreciso o antiguo).
 
+**Cerca manda el Bluetooth:** si la distancia BLE es menor que la precisión GPS del protegido, el
+GPS no aporta una dirección fiable (los errores de los dos GPS pueden contradecir al Bluetooth). El
+mapa no muestra la posición estimada y sugiere volver al radar.
+
 Sin posición del protegido (recinto cerrado, permiso denegado, batería baja), el mapa muestra solo
 el anillo BLE. Sin posición del buscador, no se muestra el mapa: se usa el radar.
 
