@@ -21,6 +21,7 @@ data class ProtectUiState(
     val name: String,
     val enabled: Boolean,
     val consentGiven: Boolean,
+    val shareLocation: Boolean,
     val pairingCode: String,
 )
 
@@ -37,6 +38,15 @@ class ProtectViewModel(application: Application) : AndroidViewModel(application)
 
     fun giveConsent() = repository.giveConsent()
 
+    /**
+     * Activa o desactiva compartir la ubicación. Si el faro está activo, reinicia el servicio para
+     * actualizar su tipo de foreground service.
+     */
+    fun setShareLocation(share: Boolean) {
+        repository.setShareLocation(share)
+        if (repository.state.value.enabled) ProtectionService.start(getApplication())
+    }
+
     /** Activa o desactiva el faro. Activarlo requiere consentimiento previo. */
     fun setEnabled(enabled: Boolean) {
         val app = getApplication<Application>()
@@ -49,6 +59,7 @@ class ProtectViewModel(application: Application) : AndroidViewModel(application)
         name = beacon.name,
         enabled = enabled,
         consentGiven = consentGiven,
+        shareLocation = shareLocation,
         pairingCode = PairingCode.format(beacon),
     )
 }

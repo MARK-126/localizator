@@ -15,8 +15,14 @@ import java.util.Base64
  * @property beacon secreto y nombre propios.
  * @property enabled interruptor del faro.
  * @property consentGiven el usuario aceptó la explicación del modo protegido.
+ * @property shareLocation compartir la ubicación aproximada cifrada en la respuesta de escaneo.
  */
-data class ProtectionState(val beacon: PairedBeacon, val enabled: Boolean, val consentGiven: Boolean)
+data class ProtectionState(
+    val beacon: PairedBeacon,
+    val enabled: Boolean,
+    val consentGiven: Boolean,
+    val shareLocation: Boolean,
+)
 
 /**
  * Persistencia del modo protegido en `SharedPreferences` privadas. El secreto se genera en el primer
@@ -41,6 +47,11 @@ class ProtectionRepository(context: Context) {
         mutableState.update { it.copy(enabled = enabled) }
     }
 
+    fun setShareLocation(share: Boolean) {
+        prefs.edit().putBoolean(KEY_SHARE_LOCATION, share).apply()
+        mutableState.update { it.copy(shareLocation = share) }
+    }
+
     fun giveConsent() {
         prefs.edit().putBoolean(KEY_CONSENT, true).apply()
         mutableState.update { it.copy(consentGiven = true) }
@@ -56,6 +67,7 @@ class ProtectionRepository(context: Context) {
             beacon = PairedBeacon(secret, name),
             enabled = prefs.getBoolean(KEY_ENABLED, false),
             consentGiven = prefs.getBoolean(KEY_CONSENT, false),
+            shareLocation = prefs.getBoolean(KEY_SHARE_LOCATION, false),
         )
     }
 
@@ -65,5 +77,6 @@ class ProtectionRepository(context: Context) {
         const val KEY_NAME = "name"
         const val KEY_ENABLED = "enabled"
         const val KEY_CONSENT = "consent"
+        const val KEY_SHARE_LOCATION = "share_location"
     }
 }
