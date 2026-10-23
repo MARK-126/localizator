@@ -184,11 +184,12 @@ adaptadores*.
 | 08 | `feature/08-calibracion` | Asistente de calibración a 1 m y 3 m ([`CALIBRACION.md`](CALIBRACION.md)) | Error medido antes y después |
 | 09 | `feature/09-direccion-brujula` | Barrido de 360° → flecha de dirección sobre la brújula del radar | Prueba de campo |
 | 10 | `feature/10-hacer-sonar` | Conexión GATT autenticada → alarma | 2 teléfonos |
+| 11 | `feature/11-busqueda-en-grupo` | Invitación de 24 h, red entre teléfonos y multilateración ([`GRUPO.md`](GRUPO.md)) | 3 o más teléfonos |
 
 ## 10. Fuera del MVP (futuro)
 
 - **UWB** (`androidx.core.uwb`) en equipos compatibles (Pixel Pro, Galaxy S Ultra).
-- **Red colaborativa:** que otros teléfonos reporten la ubicación GPS del faro a un
+- **Red colaborativa global:** que teléfonos desconocidos reporten la ubicación GPS del faro a un
   servidor (el "encontrar a distancia" de Samsung y Google). Requiere un backend.
 - **Activación remota** del modo "perdido" desde la web.
 - iOS.
