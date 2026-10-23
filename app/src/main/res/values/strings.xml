@@ -24,4 +24,6 @@
     <string name="zone_near">Cerca</string>
     <string name="zone_far">Lejos</string>
     <string name="zone_unknown">Desconocido</string>
+    <string name="details_copy">Copiar</string>
+    <string name="details_close">Cerrar</string>
 </resources>

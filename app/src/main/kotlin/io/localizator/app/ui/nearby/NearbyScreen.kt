@@ -71,10 +71,14 @@ fun NearbyScreen(
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
-                items(state.devices, key = { it.id }) { DeviceRow(it) }
+                items(state.devices, key = { it.id }) { device ->
+                    DeviceRow(device, onClick = { viewModel.select(device.id) })
+                }
             }
         }
     }
+
+    state.selected?.let { DeviceDetailsDialog(it, onDismiss = { viewModel.select(null) }) }
 }
 
 @Composable
@@ -118,11 +122,11 @@ private fun CenteredMessage(@StringRes message: Int, showProgress: Boolean) {
 }
 
 @Composable
-private fun DeviceRow(device: DeviceEstimate) {
+private fun DeviceRow(device: DeviceEstimate, onClick: () -> Unit) {
     val manufacturer = device.manufacturerId?.let(Manufacturers::labelOf)
     val title = device.name ?: manufacturer ?: stringResource(R.string.nearby_unknown_device)
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -159,7 +163,14 @@ private fun DeviceRow(device: DeviceEstimate) {
 
 private val MAX_DISTANCE_OPTIONS = listOf(5.0, 15.0, NearbyFilter.DEFAULT_MAX_DISTANCE_METERS)
 
-private fun formatMeters(meters: Double): String = String.format(Locale.getDefault(), "%.1f m", meters)
+private fun formatMeters(meters: Double): String =
+    if (meters < MIN_DISPLAY_METERS) {
+        "< " + String.format(Locale.getDefault(), "%.1f m", MIN_DISPLAY_METERS)
+    } else {
+        String.format(Locale.getDefault(), "%.1f m", meters)
+    }
+
+private const val MIN_DISPLAY_METERS = 0.1
 
 private fun trendSymbol(trend: Trend): String = when (trend) {
     Trend.APPROACHING -> "↑"

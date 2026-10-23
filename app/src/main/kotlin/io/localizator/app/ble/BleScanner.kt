@@ -8,12 +8,13 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import io.localizator.core.tracking.Advertisement
 import io.localizator.core.tracking.DeviceCategory
+import io.localizator.core.tracking.DeviceNames
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
 /**
- * Escaneo BLE continuo como [Flow] de [Advertisement].
+ * Escaneo BLE continuo como [Flow] de [ScanSample].
  *
  * - `SCAN_MODE_LOW_LATENCY`, sin agrupar resultados (`reportDelay = 0`).
  * - El escaneo empieza al colectar y se detiene al cancelar la colección.
@@ -25,7 +26,7 @@ import kotlinx.coroutines.flow.callbackFlow
 class BleScanner(private val context: Context) {
 
     @SuppressLint("MissingPermission")
-    fun scan(): Flow<Advertisement> = callbackFlow {
+    fun scan(): Flow<ScanSample> = callbackFlow {
         if (!BluetoothPermissions.allGranted(context)) {
             throw SecurityException("Permisos de Bluetooth no concedidos")
         }
@@ -34,11 +35,11 @@ class BleScanner(private val context: Context) {
 
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
-                trySend(result.toAdvertisement())
+                trySend(result.toSample())
             }
 
             override fun onBatchScanResults(results: MutableList<ScanResult>) {
-                results.forEach { trySend(it.toAdvertisement()) }
+                results.forEach { trySend(it.toSample()) }
             }
 
             override fun onScanFailed(errorCode: Int) {
@@ -60,19 +61,32 @@ class BleScanner(private val context: Context) {
 class ScanFailedException(val errorCode: Int) : Exception("Escaneo BLE fallido (código $errorCode)")
 
 @SuppressLint("MissingPermission")
-private fun ScanResult.toAdvertisement(): Advertisement {
+private fun ScanResult.toSample(): ScanSample {
     val record = scanRecord
     val manufacturerData = record?.manufacturerSpecificData
-    return Advertisement(
+    val manufacturerIds = manufacturerData?.let { data -> List(data.size()) { data.keyAt(it) } }.orEmpty()
+    val advertisement = Advertisement(
         id = device.address,
-        name = record?.deviceName ?: runCatching { device.name }.getOrNull(),
+        name = DeviceNames.sanitize(record?.deviceName ?: cachedDeviceName()),
         rssi = rssi,
         txPower = record?.txPowerLevel?.takeIf { it != Int.MIN_VALUE },
         timestampMs = timestampNanos / 1_000_000,
-        manufacturerId = manufacturerData?.takeIf { it.size() > 0 }?.keyAt(0),
+        manufacturerId = manufacturerIds.firstOrNull(),
         category = deviceCategory(),
+        manufacturerIds = manufacturerIds,
     )
+    val details = AdvertisementDetails(
+        manufacturerData = manufacturerIds.associateWith { id -> manufacturerData?.get(id)?.toHex().orEmpty() },
+        serviceUuids = record?.serviceUuids.orEmpty().map { it.shortForm() },
+        serviceData = record?.serviceData.orEmpty().entries.associate { (uuid, data) -> uuid.shortForm() to data.toHex() },
+        connectable = isConnectable,
+        rawBytes = record?.bytes?.toHex().orEmpty(),
+    )
+    return ScanSample(advertisement, details)
 }
+
+@SuppressLint("MissingPermission")
+private fun ScanResult.cachedDeviceName(): String? = runCatching { device.name }.getOrNull()
 
 @SuppressLint("MissingPermission")
 private fun ScanResult.deviceCategory(): DeviceCategory {

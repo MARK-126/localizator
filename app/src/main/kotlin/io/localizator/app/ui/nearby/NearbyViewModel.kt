@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.localizator.app.ble.AdvertisementDetails
 import io.localizator.app.ble.BleScanner
 import io.localizator.core.tracking.DeviceEstimate
 import io.localizator.core.tracking.DeviceTracker
@@ -19,18 +20,24 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Estado de [NearbyScreen].
  *
  * @property devices dispositivos que pasan [filter], ordenados por distancia ascendente.
  * @property totalCount dispositivos detectados antes de aplicar [filter].
+ * @property selected dispositivo abierto en el detalle; `null` si no hay ninguno o dejó de detectarse.
  */
 data class NearbyUiState(
     val devices: List<DeviceEstimate> = emptyList(),
     val totalCount: Int = 0,
     val filter: NearbyFilter = NearbyFilter(),
+    val selected: SelectedDevice? = null,
 )
+
+/** Dispositivo abierto en el detalle: estimación actual y último anuncio en crudo. */
+data class SelectedDevice(val estimate: DeviceEstimate, val details: AdvertisementDetails?)
 
 /**
  * Dispositivos cercanos filtrados.
@@ -45,6 +52,8 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
     private val scanner = BleScanner(application)
     private val tracker = DeviceTracker()
     private val filter = MutableStateFlow(NearbyFilter())
+    private val selectedId = MutableStateFlow<String?>(null)
+    private val details = ConcurrentHashMap<String, AdvertisementDetails>()
 
     private val snapshots = channelFlow {
         launch {
@@ -53,21 +62,36 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
                     delay(RETRY_DELAY_MS)
                     true
                 }
-                .collect { tracker.onAdvertisement(it) }
+                .collect { sample ->
+                    details[sample.advertisement.id] = sample.details
+                    tracker.onAdvertisement(sample.advertisement)
+                }
         }
         while (isActive) {
-            send(tracker.snapshot(SystemClock.elapsedRealtime()))
+            val snapshot = tracker.snapshot(SystemClock.elapsedRealtime())
+            details.keys.retainAll(snapshot.map { it.id }.toSet())
+            send(snapshot)
             delay(REFRESH_INTERVAL_MS)
         }
     }
 
-    val uiState: StateFlow<NearbyUiState> = combine(snapshots, filter) { devices, filter ->
-        NearbyUiState(devices = filter.apply(devices), totalCount = devices.size, filter = filter)
+    val uiState: StateFlow<NearbyUiState> = combine(snapshots, filter, selectedId) { devices, currentFilter, currentSelection ->
+        NearbyUiState(
+            devices = currentFilter.apply(devices),
+            totalCount = devices.size,
+            filter = currentFilter,
+            selected = devices.firstOrNull { it.id == currentSelection }?.let { SelectedDevice(it, details[it.id]) },
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), NearbyUiState())
 
     fun setMaxDistance(meters: Double) = filter.update { it.copy(maxDistanceMeters = meters) }
 
     fun setAndroidPhonesOnly(enabled: Boolean) = filter.update { it.copy(androidPhonesOnly = enabled) }
+
+    /** Abre el detalle de [id], o lo cierra con `null`. */
+    fun select(id: String?) {
+        selectedId.value = id
+    }
 
     private companion object {
         const val REFRESH_INTERVAL_MS = 500L
