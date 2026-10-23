@@ -7,6 +7,8 @@ coreKtx = "1.15.0"
 lifecycle = "2.8.7"
 zxingCore = "3.5.3"
 zxingAndroid = "4.3.0"
+playServicesLocation = "21.3.0"
+osmdroid = "6.1.20"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -21,6 +23,8 @@ androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxingCore" }
 zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingAndroid" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
+osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
