@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import io.localizator.app.R
+import io.localizator.app.ui.map.MapScreen
 import io.localizator.app.ui.nearby.NearbyScreen
 import io.localizator.app.ui.protect.ProtectScreen
 import io.localizator.app.ui.radar.RadarScreen
@@ -30,12 +31,13 @@ private enum class Tab(@StringRes val label: Int, val icon: ImageVector) {
 
 /**
  * Pantalla principal con navegación inferior entre [NearbyScreen] y [ProtectScreen]. Dentro de
- * *Buscar*, abrir un teléfono muestra [RadarScreen] hasta volver atrás.
+ * *Buscar*, abrir un teléfono muestra [RadarScreen] y, desde él, [MapScreen]; *Atrás* vuelve un nivel.
  */
 @Composable
 fun MainScreen() {
     var tab by rememberSaveable { mutableStateOf(Tab.SEARCH) }
     var radarPhoneId by rememberSaveable { mutableStateOf<String?>(null) }
+    var mapPhoneId by rememberSaveable { mutableStateOf<String?>(null) }
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -51,9 +53,19 @@ fun MainScreen() {
         },
     ) { padding ->
         when (tab) {
-            Tab.SEARCH -> when (val phoneId = radarPhoneId) {
-                null -> NearbyScreen(onOpenRadar = { radarPhoneId = it }, modifier = Modifier.padding(padding))
-                else -> RadarScreen(phoneId, onBack = { radarPhoneId = null }, modifier = Modifier.padding(padding))
+            Tab.SEARCH -> {
+                val mapId = mapPhoneId
+                val radarId = radarPhoneId
+                when {
+                    mapId != null -> MapScreen(mapId, onBack = { mapPhoneId = null }, modifier = Modifier.padding(padding))
+                    radarId != null -> RadarScreen(
+                        radarId,
+                        onBack = { radarPhoneId = null },
+                        onOpenMap = { mapPhoneId = it },
+                        modifier = Modifier.padding(padding),
+                    )
+                    else -> NearbyScreen(onOpenRadar = { radarPhoneId = it }, modifier = Modifier.padding(padding))
+                }
             }
             Tab.PROTECT -> ProtectScreen(modifier = Modifier.padding(padding))
         }

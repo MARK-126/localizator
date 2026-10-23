@@ -75,7 +75,7 @@ conectable** con un único campo *Service Data*:
 - **Privacidad:** el ID cambia cada 15 min y no se puede predecir sin el secreto.
 - **Tolerancia al reloj:** el buscador prueba las ventanas `t-1`, `t` y `t+1`.
 - Para "hacer sonar" se usa un **anuncio conectable** aparte, que solo se activa a
-  petición. Ese detalle se define en la fase 09.
+  petición. Ese detalle se define en la fase 10.
 
 ## 5. Pipeline de precisión (modo buscador)
 
@@ -180,9 +180,10 @@ adaptadores*.
 | 04 | `feature/04-escaneo-generico` | Lista de dispositivos cercanos con distancia | APK en un teléfono |
 | 05 | `feature/05-faro-y-emparejamiento` | Modo protegido + ID rotativo + QR | 2 teléfonos: B reconoce a A |
 | 06 | `feature/06-busqueda-precisa` | Radar: círculo de distancia, banda de error, brújula, caliente/frío y vibración ([`RADAR.md`](RADAR.md)) | Prueba de campo |
-| 07 | `feature/07-calibracion` | Asistente de calibración a 1 m y 3 m | Error medido antes y después |
-| 08 | `feature/08-direccion-brujula` | Barrido de 360° → flecha de dirección sobre la brújula del radar | Prueba de campo |
-| 09 | `feature/09-hacer-sonar` | Conexión GATT autenticada → alarma | 2 teléfonos |
+| 07 | `feature/07-ubicacion-gps` | Mapa (OpenStreetMap) con círculo GPS y anillo BLE; ubicación cifrada en la respuesta de escaneo ([`UBICACION.md`](UBICACION.md)) | 2 teléfonos al aire libre |
+| 08 | `feature/08-calibracion` | Asistente de calibración a 1 m y 3 m | Error medido antes y después |
+| 09 | `feature/09-direccion-brujula` | Barrido de 360° → flecha de dirección sobre la brújula del radar | Prueba de campo |
+| 10 | `feature/10-hacer-sonar` | Conexión GATT autenticada → alarma | 2 teléfonos |
 
 ## 10. Fuera del MVP (futuro)
 

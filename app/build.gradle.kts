@@ -58,5 +58,8 @@ dependencies {
 
     implementation(libs.zxing.core)
     implementation(libs.zxing.android.embedded)
+
+    implementation(libs.play.services.location)
+    implementation(libs.osmdroid.android)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

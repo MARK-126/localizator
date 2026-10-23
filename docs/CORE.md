@@ -18,6 +18,7 @@ gradle :core:test
 |---|---|
 | `io.localizator.core.signal` | `PathLossModel`, `KalmanFilter`, `TrendDetector`, `Trend`, `HeadingFilter`, `ProximityFeedback` |
 | `io.localizator.core.calibration` | `Calibrator` |
+| `io.localizator.core.location` | `SharedLocation`, `LocationPayload`, `GeoPoint`, `Geo`, `LocationFusion`, `FusedLocation`, `BatteryPolicy`, `PowerMode` |
 | `io.localizator.core.beacon` | `BeaconProtocol`, `RotatingId`, `BeaconCodec`, `PairedBeacon`, `PairingCode`, `BeaconMatcher` |
 | `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource`, `Manufacturers`, `DeviceCategory`, `NearbyFilter`, `DeviceNames` |
 
@@ -192,6 +193,17 @@ Implementa el protocolo de [`FARO.md`](FARO.md).
 | `PairingCode` | `format`/`parse` de `LOCALIZATOR:1:<secreto b64url>:<nombre b64url>` |
 | `BeaconMatcher` | `match(payload, nowEpochMs)`: ventanas `t−1..t+1`, IDs esperados en caché por ventana. No es thread-safe |
 
+## Paquete `location`
+
+Implementa [`UBICACION.md`](UBICACION.md).
+
+| Clase | Responsabilidad |
+|---|---|
+| `LocationPayload` | `encode(location, secret, rotatingId, sequence)` → 13 bytes; `decode(...)` → `SharedLocation?`. Clave `HMAC-SHA256(secret, "localizator-ubicacion")[0..16]`, AES-128-CTR con IV `rotatingId ‖ seq ‖ 0⁷`. Coordenadas int32 en 1e-7°, precisión en m (≤ 255) y antigüedad en unidades de 10 s (≤ 2550 s). UUID de servicio propio |
+| `Geo` | `distanceMeters` (haversine), `bearingDegrees` (rumbo inicial), `destination(origen, rumbo, distancia)` sobre esfera de radio 6 371 008,8 m |
+| `LocationFusion.fuse` | Punto del anillo BLE (a `distanceMeters`) en el rumbo hacia el centro GPS; `consistent` si `d − precisiónGPS ≤ bleMax` y `d + precisiónGPS ≥ bleMin`; `preferBluetooth` si `bleDistance < precisiónGPS` |
+| `BatteryPolicy` | `modeFor(nivel, cargando)`: `NORMAL` (≥ 30 % o cargando), `SAVING` (15–29 %), `CRITICAL` (< 15 %); `gpsIntervalMs`: 30 s, 5 min o `null` |
+
 ## Cobertura de tests
 
 | Clase | Comportamiento verificado |
@@ -202,6 +214,7 @@ Implementa el protocolo de [`FARO.md`](FARO.md).
 | `Calibrator` | Ajuste con 1 punto, recuperación de P1m y n con 2 puntos y ruido, muestras insuficientes |
 | `Manufacturers` | Fabricantes conocidos, desconocidos y nulos, etiqueta hexadecimal |
 | `NearbyFilter` | Distancia máxima, filtro Android, heurística por categoría y fabricante, fabricantes no iniciales |
+| `location` | Ida y vuelta con precisión de 1e-7°, tamaño de respuesta de escaneo, saturación, dependencia de secuencia e ID, secreto incorrecto, versión y tamaño inválidos; geodesia (destino/distancia/rumbo, 1° ≈ 111 km); fusión consistente e inconsistente; umbrales de batería |
 | `HeadingFilter` | Primera lectura, cruce 359°→1°, convergencia, normalización |
 | `ProximityFeedback` | Saturación, monotonía, punto medio geométrico |
 | `beacon` | ID rotativo determinista y por ventana, codec (P1m, desconocido, versión y tamaño inválidos), código de emparejamiento (ida y vuelta, acentos, inválidos), reconocimiento con ±1 ventana y faros ajenos |

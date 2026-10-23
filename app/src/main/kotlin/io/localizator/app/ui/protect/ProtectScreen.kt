@@ -50,7 +50,8 @@ import java.io.File
 
 /**
  * Modo protegido: nombre del teléfono, interruptor del faro (con consentimiento la primera vez y
- * solicitud de notificaciones en Android 13+), QR de emparejamiento y copia de respaldo compartible.
+ * solicitud de notificaciones en Android 13+), interruptor de ubicación compartida (solicita permiso
+ * de ubicación), QR de emparejamiento y copia de respaldo compartible.
  */
 @Composable
 fun ProtectScreen(modifier: Modifier = Modifier, viewModel: ProtectViewModel = viewModel()) {
@@ -63,6 +64,10 @@ fun ProtectScreen(modifier: Modifier = Modifier, viewModel: ProtectViewModel = v
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { viewModel.setEnabled(true) }
+
+    val locationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { results -> if (results.values.any { it }) viewModel.setShareLocation(true) }
 
     val enable = {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -108,6 +113,27 @@ fun ProtectScreen(modifier: Modifier = Modifier, viewModel: ProtectViewModel = v
                             !checked -> viewModel.setEnabled(false)
                             state.consentGiven -> enable()
                             else -> showConsent = true
+                        }
+                    },
+                )
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.protect_location), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.protect_location_body), style = MaterialTheme.typography.bodySmall)
+                }
+                Switch(
+                    checked = state.shareLocation,
+                    onCheckedChange = { checked ->
+                        if (checked) {
+                            locationPermission.launch(
+                                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                            )
+                        } else {
+                            viewModel.setShareLocation(false)
                         }
                     },
                 )

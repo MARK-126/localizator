@@ -7,8 +7,8 @@ Vista que guía al usuario hacia un teléfono emparejado durante los últimos me
 | Incluye | No incluye |
 |---|---|
 | Distancia estimada como círculo y margen de error como banda | Posición del otro teléfono en un mapa (BLE no da dirección) |
-| Brújula que gira con el teléfono | Flecha de dirección hacia el objetivo (fase 08, barrido de 360°) |
-| Tendencia (acercando / alejando) y vibración por proximidad | Calibración de P1m (fase 07) |
+| Brújula que gira con el teléfono | Flecha de dirección hacia el objetivo (fase 09, barrido de 360°) |
+| Tendencia (acercando / alejando) y vibración por proximidad | Calibración de P1m (fase 08) |
 
 ## Navegación
 
