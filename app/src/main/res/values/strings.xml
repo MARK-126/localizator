@@ -62,4 +62,19 @@
     <string name="protection_notification_title">Modo protegido activo</string>
     <string name="protection_notification_text">Tus teléfonos emparejados pueden encontrar este teléfono.</string>
     <string name="protection_stop">Detener</string>
+    <string name="radar_back">Volver</string>
+    <string name="radar_details">Detalles</string>
+    <string name="radar_vibration">Vibración</string>
+    <string name="radar_waiting">Esperando la señal…</string>
+    <string name="radar_lost">Señal perdida</string>
+    <string name="radar_compass_unavailable">Este teléfono no tiene sensor de orientación: la brújula no está disponible.</string>
+    <string name="radar_range_trend">%1$s – %2$s · %3$s</string>
+    <string name="radar_trend_approaching">Acercándote</string>
+    <string name="radar_trend_away">Alejándote</string>
+    <string name="radar_trend_steady">Estable</string>
+    <string name="radar_trend_unknown">Midiendo…</string>
+    <string name="cardinal_north">N</string>
+    <string name="cardinal_east">E</string>
+    <string name="cardinal_south">S</string>
+    <string name="cardinal_west">O</string>
 </resources>

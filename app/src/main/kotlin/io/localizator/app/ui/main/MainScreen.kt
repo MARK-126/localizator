@@ -21,16 +21,21 @@ import androidx.compose.ui.res.stringResource
 import io.localizator.app.R
 import io.localizator.app.ui.nearby.NearbyScreen
 import io.localizator.app.ui.protect.ProtectScreen
+import io.localizator.app.ui.radar.RadarScreen
 
 private enum class Tab(@StringRes val label: Int, val icon: ImageVector) {
     SEARCH(R.string.tab_search, Icons.Filled.Search),
     PROTECT(R.string.tab_protect, Icons.Filled.Lock),
 }
 
-/** Pantalla principal con navegación inferior entre [NearbyScreen] y [ProtectScreen]. */
+/**
+ * Pantalla principal con navegación inferior entre [NearbyScreen] y [ProtectScreen]. Dentro de
+ * *Buscar*, abrir un teléfono muestra [RadarScreen] hasta volver atrás.
+ */
 @Composable
 fun MainScreen() {
     var tab by rememberSaveable { mutableStateOf(Tab.SEARCH) }
+    var radarPhoneId by rememberSaveable { mutableStateOf<String?>(null) }
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -46,7 +51,10 @@ fun MainScreen() {
         },
     ) { padding ->
         when (tab) {
-            Tab.SEARCH -> NearbyScreen(modifier = Modifier.padding(padding))
+            Tab.SEARCH -> when (val phoneId = radarPhoneId) {
+                null -> NearbyScreen(onOpenRadar = { radarPhoneId = it }, modifier = Modifier.padding(padding))
+                else -> RadarScreen(phoneId, onBack = { radarPhoneId = null }, modifier = Modifier.padding(padding))
+            }
             Tab.PROTECT -> ProtectScreen(modifier = Modifier.padding(padding))
         }
     }
