@@ -23,15 +23,15 @@ data class NearbyFilter(
 val ANDROID_PHONE_MANUFACTURERS: Set<Int> = setOf(Manufacturers.SAMSUNG, Manufacturers.GOOGLE)
 
 /**
- * Heurística de teléfono Android:
- * - [DeviceCategory.PHONE] y fabricante distinto de Apple, o
- * - [DeviceCategory.UNKNOWN] y fabricante en [ANDROID_PHONE_MANUFACTURERS].
+ * Heurística de teléfono Android, sobre todos los fabricantes del anuncio:
+ * - [DeviceCategory.PHONE] y ninguno es Apple, o
+ * - [DeviceCategory.UNKNOWN] y alguno está en [ANDROID_PHONE_MANUFACTURERS].
  *
  * Admite falsos positivos (otros dispositivos Samsung/Google) y falsos negativos (teléfonos que
  * no anuncian fabricante).
  */
 fun DeviceEstimate.isLikelyAndroidPhone(): Boolean = when (category) {
-    DeviceCategory.PHONE -> manufacturerId != Manufacturers.APPLE
+    DeviceCategory.PHONE -> Manufacturers.APPLE !in manufacturerIds
     DeviceCategory.OTHER -> false
-    DeviceCategory.UNKNOWN -> manufacturerId in ANDROID_PHONE_MANUFACTURERS
+    DeviceCategory.UNKNOWN -> manufacturerIds.any { it in ANDROID_PHONE_MANUFACTURERS }
 }

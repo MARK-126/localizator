@@ -39,15 +39,23 @@ class NearbyFilterTest {
         assertFalse(estimate("e", 1.0, manufacturerId = 0x0006).isLikelyAndroidPhone())
     }
 
+    @Test
+    fun `considera todos los fabricantes del anuncio, no solo el primero`() {
+        val est = estimate("f", 1.0, manufacturerIds = listOf(0x0006, Manufacturers.SAMSUNG))
+        assertTrue(est.isLikelyAndroidPhone())
+    }
+
     private fun estimate(
         id: String,
         distance: Double,
         manufacturerId: Int? = null,
         category: DeviceCategory = DeviceCategory.UNKNOWN,
+        manufacturerIds: List<Int> = listOfNotNull(manufacturerId),
     ) = DeviceEstimate(
         id = id,
         name = null,
-        manufacturerId = manufacturerId,
+        manufacturerId = manufacturerIds.firstOrNull(),
+        manufacturerIds = manufacturerIds,
         category = category,
         rawRssi = -60,
         filteredRssi = -60.0,
