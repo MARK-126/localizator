@@ -2,6 +2,7 @@ package io.localizator.app
 
 import android.app.Application
 import android.content.Context
+import io.localizator.app.data.CalibrationRepository
 import io.localizator.app.data.PairedBeaconsRepository
 import io.localizator.app.data.ProtectionRepository
 
@@ -9,6 +10,7 @@ import io.localizator.app.data.ProtectionRepository
 class LocalizatorApp : Application() {
     val protection: ProtectionRepository by lazy { ProtectionRepository(this) }
     val pairedBeacons: PairedBeaconsRepository by lazy { PairedBeaconsRepository(this) }
+    val calibrations: CalibrationRepository by lazy { CalibrationRepository(this) }
 }
 
 val Context.localizatorApp: LocalizatorApp get() = applicationContext as LocalizatorApp

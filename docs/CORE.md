@@ -111,6 +111,12 @@ resume por la mediana de sus muestras y solo cuentan las que tienen al menos
 
 No es thread-safe.
 
+| Método auxiliar | Resultado |
+|---|---|
+| `medianRssi(d)` | Mediana de las muestras a `d`, o `null` |
+| `evaluate(model)` | Distancia real → distancia estimada por `model` con la mediana de cada distancia medida |
+| `clear(d)` / `clear()` | Descarta las muestras de una distancia / de todas |
+
 ## `tracking.DeviceTracker`
 
 Mantiene un estado por `Advertisement.id`. Es thread-safe (`@Synchronized`).
@@ -211,7 +217,7 @@ Implementa [`UBICACION.md`](UBICACION.md).
 | `PathLossModel` | Distancias de referencia, inversa, conversión de TX Power |
 | `KalmanFilter` | Convergencia con ruido σ = 4 dB, rechazo de pico aislado, seguimiento de un cambio sostenido, reacción en ≤ 1 s a 10 Hz |
 | `TrendDetector` | Acercamiento, alejamiento y señal estable |
-| `Calibrator` | Ajuste con 1 punto, recuperación de P1m y n con 2 puntos y ruido, muestras insuficientes |
+| `Calibrator` | Ajuste con 1 punto, recuperación de P1m y n con 2 puntos y ruido, muestras insuficientes, evaluación antes/después, mediana y limpieza por distancia |
 | `Manufacturers` | Fabricantes conocidos, desconocidos y nulos, etiqueta hexadecimal |
 | `NearbyFilter` | Distancia máxima, filtro Android, heurística por categoría y fabricante, fabricantes no iniciales |
 | `location` | Ida y vuelta con precisión de 1e-7°, tamaño de respuesta de escaneo, saturación, dependencia de secuencia e ID, secreto incorrecto, versión y tamaño inválidos; geodesia (destino/distancia/rumbo, 1° ≈ 111 km); fusión consistente e inconsistente; umbrales de batería |

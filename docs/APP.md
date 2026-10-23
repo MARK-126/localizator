@@ -65,6 +65,7 @@ app/src/main/kotlin/io/localizator/app/
 │   ├── AdvertisementDetails Contenido en crudo de un anuncio; ScanSample
 │   └── BeaconAdvertiser     Emisión del faro
 ├── data/
+│   ├── CalibrationRepository    Calibraciones por teléfono emparejado
 │   ├── ProtectionRepository     Secreto, nombre, interruptor y consentimiento propios
 │   └── PairedBeaconsRepository  Teléfonos emparejados
 ├── service/ProtectionService    Foreground service que emite el faro
@@ -76,6 +77,7 @@ app/src/main/kotlin/io/localizator/app/
 │   └── Haptics              Pulsos de vibración
 └── ui/
     ├── theme/Theme.kt       LocalizatorTheme (color dinámico en Android 12+)
+    ├── calibration/CalibrationScreen.kt  Asistente de calibración (1 m y 3 m)
     ├── home/HomeScreen.kt   Estado de permisos y Bluetooth; muestra MainScreen si está listo
     ├── main/MainScreen.kt   Navegación inferior: Buscar / Proteger; radar y mapa dentro de Buscar
     ├── map/MapScreen.kt     Mapa OpenStreetMap: círculo GPS, anillo BLE y posición estimada
@@ -89,7 +91,7 @@ app/src/main/kotlin/io/localizator/app/
         └── ProtectScreen    Nombre, interruptor, consentimiento, QR y copia de respaldo
 ```
 
-El protocolo del faro y los flujos están en [`FARO.md`](FARO.md); el radar, en [`RADAR.md`](RADAR.md); la ubicación por GPS, en [`UBICACION.md`](UBICACION.md).
+El protocolo del faro y los flujos están en [`FARO.md`](FARO.md); el radar, en [`RADAR.md`](RADAR.md); la ubicación por GPS, en [`UBICACION.md`](UBICACION.md); la calibración, en [`CALIBRACION.md`](CALIBRACION.md).
 
 ### `ble.BluetoothPermissions`
 
@@ -332,3 +334,24 @@ recepción.
 | Resumen | GPS (precisión y antigüedad), Bluetooth (rango) y "~d m hacia el <rumbo de 8 puntos>", o aviso de inconsistencia |
 
 El radar abre el mapa con *Mapa*; *Atrás* vuelve al radar.
+
+### `data.CalibrationRepository`
+
+`SharedPreferences` `calibration`: ID de emparejamiento → `P1m;n` (formato `Locale.US`). Expone
+`models: StateFlow<Map<String, PathLossModel>>`; `save(id, model)` y `remove(id)`.
+`NearbyViewModel` aplica cada modelo con `DeviceTracker.setCalibration`, y lo retira cuando se borra.
+La calibración del usuario tiene prioridad sobre el P1m del payload del faro. *Olvidar* un teléfono
+también elimina su calibración.
+
+### `ui.calibration.CalibrationScreen`
+
+| Paso | Comportamiento |
+|---|---|
+| Preparar | Instrucciones para 1 m y luego 3 m: cara a cara, a la altura del pecho, sin obstáculos |
+| Medir | 12 s de `NearbyViewModel.rssiSamples(id)` (RSSI crudo de los anuncios resueltos) en `Calibrator.addSample`; barra de progreso y contador |
+| Validar | Menos de 10 lecturas: vuelve a *Preparar* con aviso |
+| Resultado | `Calibrator.fit()`; P1m, n y "a X m reales: antes A → ahora B" con `evaluate(modelo actual)` y `evaluate(nuevo)` |
+| Acciones | *Guardar* (`saveCalibration`), *Repetir*, *Cancelar* / *Atrás* |
+
+El radar muestra si el teléfono está calibrado, con *Calibrar* / *Volver a calibrar* y *Borrar
+calibración*.

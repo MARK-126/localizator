@@ -102,4 +102,23 @@
         <item>oeste</item>
         <item>noroeste</item>
     </string-array>
+    <string name="radar_calibrate">Calibrar</string>
+    <string name="radar_recalibrate">Volver a calibrar</string>
+    <string name="radar_clear_calibration">Borrar calibración</string>
+    <string name="radar_calibrated">Calibrado para este teléfono: margen de error reducido.</string>
+    <string name="radar_not_calibrated">Sin calibrar: calibra para reducir el margen de error.</string>
+    <string name="calibration_title">Calibrar %1$s</string>
+    <string name="calibration_step">Paso %1$d de %2$d</string>
+    <string name="calibration_place">Coloca los teléfonos a %1$s</string>
+    <string name="calibration_conditions">Cara a cara, a la altura del pecho, sin obstáculos ni personas en medio. El otro teléfono debe tener el modo protegido activo. No los muevas durante la medición.</string>
+    <string name="calibration_measure">Medir</string>
+    <string name="calibration_measuring">Midiendo a %1$s…</string>
+    <string name="calibration_samples">%1$d lecturas</string>
+    <string name="calibration_too_few">Solo %1$d lecturas (mínimo %2$d). Comprueba que el modo protegido está activo y vuelve a medir.</string>
+    <string name="calibration_result">Resultado</string>
+    <string name="calibration_model">P1m = %1$s dBm · n = %2$s</string>
+    <string name="calibration_compare">A %1$s reales: antes %2$s → ahora %3$s</string>
+    <string name="calibration_failed">No se pudo calcular la calibración. Repite las mediciones.</string>
+    <string name="calibration_save">Guardar</string>
+    <string name="calibration_repeat">Repetir</string>
 </resources>

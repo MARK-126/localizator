@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,19 +66,22 @@ import kotlin.math.sin
  * Radar de un teléfono emparejado: este teléfono en el centro, círculo en la distancia estimada,
  * banda con el intervalo de incertidumbre, brújula que gira con el rumbo, tendencia y vibración por
  * proximidad. Si el teléfono deja de detectarse, conserva la última estimación en gris. *Mapa*
- * invoca [onOpenMap].
+ * invoca [onOpenMap]; *Calibrar* invoca [onOpenCalibration], y *Borrar calibración* vuelve al modelo
+ * por defecto.
  */
 @Composable
 fun RadarScreen(
     phoneId: String,
     onBack: () -> Unit,
     onOpenMap: (String) -> Unit,
+    onOpenCalibration: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: NearbyViewModel = viewModel(),
 ) {
     BackHandler(onBack = onBack)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val heading by viewModel.heading.collectAsStateWithLifecycle()
+    val calibrations by viewModel.calibrations.collectAsStateWithLifecycle()
     val phone = state.myPhones.firstOrNull { it.beacon.id == phoneId }
     val live = phone?.estimate
     var lastKnown by remember { mutableStateOf<DeviceEstimate?>(null) }
@@ -153,6 +157,23 @@ fun RadarScreen(
             Text(stringResource(R.string.radar_vibration), style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.width(12.dp))
             Switch(checked = vibrationEnabled, onCheckedChange = { vibrationEnabled = it })
+        }
+
+        val calibrated = phoneId in calibrations
+        Text(
+            stringResource(if (calibrated) R.string.radar_calibrated else R.string.radar_not_calibrated),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(onClick = { onOpenCalibration(phoneId) }) {
+                Text(stringResource(if (calibrated) R.string.radar_recalibrate else R.string.radar_calibrate))
+            }
+            if (calibrated) {
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = { viewModel.clearCalibration(phoneId) }) {
+                    Text(stringResource(R.string.radar_clear_calibration))
+                }
+            }
         }
     }
 

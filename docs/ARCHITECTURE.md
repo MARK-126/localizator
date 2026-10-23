@@ -181,7 +181,7 @@ adaptadores*.
 | 05 | `feature/05-faro-y-emparejamiento` | Modo protegido + ID rotativo + QR | 2 teléfonos: B reconoce a A |
 | 06 | `feature/06-busqueda-precisa` | Radar: círculo de distancia, banda de error, brújula, caliente/frío y vibración ([`RADAR.md`](RADAR.md)) | Prueba de campo |
 | 07 | `feature/07-ubicacion-gps` | Mapa (OpenStreetMap) con círculo GPS y anillo BLE; ubicación cifrada en la respuesta de escaneo ([`UBICACION.md`](UBICACION.md)) | 2 teléfonos al aire libre |
-| 08 | `feature/08-calibracion` | Asistente de calibración a 1 m y 3 m | Error medido antes y después |
+| 08 | `feature/08-calibracion` | Asistente de calibración a 1 m y 3 m ([`CALIBRACION.md`](CALIBRACION.md)) | Error medido antes y después |
 | 09 | `feature/09-direccion-brujula` | Barrido de 360° → flecha de dirección sobre la brújula del radar | Prueba de campo |
 | 10 | `feature/10-hacer-sonar` | Conexión GATT autenticada → alarma | 2 teléfonos |
 
