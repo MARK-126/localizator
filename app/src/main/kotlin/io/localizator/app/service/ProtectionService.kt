@@ -5,8 +5,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.bluetooth.BluetoothAdapter
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -24,15 +27,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Foreground service (`connectedDevice`) que emite el faro mientras el modo protegido está activo.
  *
- * Reinicia el anuncio al empezar cada ventana del ID rotativo y, si el emisor falla o no está
- * disponible, lo reintenta cada [RETRY_INTERVAL_MS]. La acción [ACTION_STOP] (botón de la
+ * Reinicia el anuncio al empezar cada ventana del ID rotativo, en cuanto el Bluetooth vuelve a
+ * `STATE_ON` (Android detiene los anuncios al apagarlo sin notificar a la app) y, si el emisor falla
+ * o no está disponible, cada [RETRY_INTERVAL_MS]. La acción [ACTION_STOP] (botón de la
  * notificación) desactiva el modo protegido y detiene el servicio.
  */
 class ProtectionService : Service() {
@@ -45,10 +50,26 @@ class ProtectionService : Service() {
 
     private lateinit var advertiser: BeaconAdvertiser
 
+    private val restart = Channel<Unit>(Channel.CONFLATED)
+
+    private val bluetoothReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR) == BluetoothAdapter.STATE_ON) {
+                restart.trySend(Unit)
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         advertiser = BeaconAdvertiser(this) { failed = true }
         createChannel()
+        ContextCompat.registerReceiver(
+            this,
+            bluetoothReceiver,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -76,6 +97,7 @@ class ProtectionService : Service() {
     }
 
     override fun onDestroy() {
+        unregisterReceiver(bluetoothReceiver)
         scope.cancel()
         advertiser.stop()
         super.onDestroy()
@@ -83,17 +105,18 @@ class ProtectionService : Service() {
 
     private suspend fun advertiseLoop() {
         var advertisedWindow: Long? = null
+        var forceRestart = false
         while (scope.isActive) {
             val now = System.currentTimeMillis()
             val window = BeaconProtocol.windowOf(now)
-            if (window != advertisedWindow || failed) {
+            if (window != advertisedWindow || failed || forceRestart) {
                 val secret = localizatorApp.protection.state.value.beacon.secret
                 val payload = BeaconCodec.encode(RotatingId.compute(secret, window), null)
                 failed = false
                 advertisedWindow = if (advertiser.start(payload)) window else null
             }
             val untilNextWindow = BeaconProtocol.nextWindowStart(now) - now
-            delay(minOf(untilNextWindow, RETRY_INTERVAL_MS))
+            forceRestart = withTimeoutOrNull(minOf(untilNextWindow, RETRY_INTERVAL_MS)) { restart.receive() } != null
         }
     }
 
