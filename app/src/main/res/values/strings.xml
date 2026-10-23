@@ -77,4 +77,27 @@
     <string name="cardinal_east">E</string>
     <string name="cardinal_south">S</string>
     <string name="cardinal_west">O</string>
+    <string name="protect_location">Compartir ubicación aproximada</string>
+    <string name="protect_location_body">Envía tu posición GPS cifrada a los teléfonos emparejados cercanos para mostrarte en su mapa. Con poca batería se reduce o se apaga.</string>
+    <string name="radar_map">Mapa</string>
+    <string name="map_you">Tú</string>
+    <string name="map_estimate">Posición estimada</string>
+    <string name="map_gps_line">GPS de %1$s: ±%2$d m · hace %3$s</string>
+    <string name="map_gps_missing">Sin ubicación GPS de %1$s (no la comparte, está bajo techo o con batería crítica)</string>
+    <string name="map_ble_line">Bluetooth: %1$s – %2$s</string>
+    <string name="map_ble_missing">Bluetooth: sin señal</string>
+    <string name="map_no_permission">Sin permiso de ubicación: el mapa no puede mostrar tu posición.</string>
+    <string name="map_waiting_own">Esperando tu ubicación…</string>
+    <string name="map_estimate_line">Estimado: ~%1$s hacia el %2$s</string>
+    <string name="map_inconsistent">GPS y Bluetooth no coinciden: el GPS puede ser impreciso o antiguo.</string>
+    <string-array name="cardinals_8">
+        <item>norte</item>
+        <item>noreste</item>
+        <item>este</item>
+        <item>sureste</item>
+        <item>sur</item>
+        <item>suroeste</item>
+        <item>oeste</item>
+        <item>noroeste</item>
+    </string-array>
 </resources>

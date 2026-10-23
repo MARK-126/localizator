@@ -64,12 +64,14 @@ import kotlin.math.sin
 /**
  * Radar de un teléfono emparejado: este teléfono en el centro, círculo en la distancia estimada,
  * banda con el intervalo de incertidumbre, brújula que gira con el rumbo, tendencia y vibración por
- * proximidad. Si el teléfono deja de detectarse, conserva la última estimación en gris.
+ * proximidad. Si el teléfono deja de detectarse, conserva la última estimación en gris. *Mapa*
+ * invoca [onOpenMap].
  */
 @Composable
 fun RadarScreen(
     phoneId: String,
     onBack: () -> Unit,
+    onOpenMap: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: NearbyViewModel = viewModel(),
 ) {
@@ -109,6 +111,9 @@ fun RadarScreen(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.weight(1f),
             )
+            TextButton(onClick = { onOpenMap(phoneId) }) {
+                Text(stringResource(R.string.radar_map))
+            }
             TextButton(onClick = { viewModel.select(phoneId) }, enabled = live != null) {
                 Text(stringResource(R.string.radar_details))
             }
