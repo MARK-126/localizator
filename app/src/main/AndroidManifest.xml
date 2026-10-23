@@ -46,6 +46,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="portrait"
+            tools:replace="screenOrientation" />
+
         <service
             android:name=".service.ProtectionService"
             android:exported="false"

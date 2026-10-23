@@ -240,7 +240,7 @@ rote la MAC. Si el payload trae P1m, se aplica como calibración de ese ID.
 
 | Opción | Mecanismo |
 |---|---|
-| Escanear QR | `ScanContract` de ZXing (solo QR, sin pitido) |
+| Escanear QR | `ScanContract` de ZXing (solo QR, sin pitido). `CaptureActivity` se fuerza a vertical en el manifiesto (`tools:replace="screenOrientation"`) |
 | Desde imagen | `PickVisualMedia` (sin permisos) → `QrCodes.loadBitmap` (lado ≤ 1600 px) → `QrCodes.decode` |
 
 El resultado se muestra en un `Toast`: el nombre emparejado o "código no válido". *Mis teléfonos*
