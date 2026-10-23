@@ -78,6 +78,13 @@ Cada sección indica la fase en la que apareció. Se amplía con cada fase nueva
 > aislado se sigue ignorando, pero **3 lecturas atípicas seguidas en la misma dirección** se toman como
 > un movimiento real y el filtro se pone al día.
 
+**¿Por qué la calibración mide a dos distancias (1 m y 3 m) y no solo a 1 m?** *(fase 08)*
+
+> Con una sola distancia solo se puede ajustar **P1m** (dónde empieza la recta); el exponente **n**
+> (la pendiente) queda supuesto en 2. Con dos distancias se obtienen dos puntos de la recta
+> `RSSI = P1m − 10·n·log10(d)` y se pueden calcular las dos incógnitas. Se usa la **mediana** de cada
+> medición, y no la media, para que los picos de multitrayecto no arrastren el resultado.
+
 ---
 
 ## 3. Anuncios BLE y privacidad
