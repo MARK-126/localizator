@@ -143,7 +143,9 @@ Conversión de `ScanResult` a `Advertisement`:
 | `rawBytes` | `scanRecord.bytes` en hexadecimal |
 
 Errores que terminan el flujo: `SecurityException` (faltan permisos), `IllegalStateException`
-(Bluetooth no disponible) y `ScanFailedException(errorCode)` (`onScanFailed`).
+(Bluetooth no disponible, o `STATE_TURNING_OFF`/`STATE_OFF` durante el escaneo) y
+`ScanFailedException(errorCode)` (`onScanFailed`). `NearbyViewModel` reintenta cada 6 s, así que
+el escaneo se reanuda solo al volver a encender el Bluetooth.
 
 ### `ui.nearby.NearbyViewModel`
 
@@ -220,6 +222,7 @@ importancia baja) y la acción *Detener*. El bucle de emisión:
 | Evento | Acción |
 |---|---|
 | Nueva ventana del ID rotativo | Payload nuevo (`BeaconCodec.encode(RotatingId(...), P1m desconocido)`) y reinicio del anuncio |
+| Bluetooth vuelve a `STATE_ON` | Reinicio inmediato del anuncio (Android lo detiene al apagar el Bluetooth sin notificarlo) |
 | Fallo del emisor | Reintento en ≤ 30 s |
 | Acción *Detener* | `enabled = false` y `stopSelf()` |
 
