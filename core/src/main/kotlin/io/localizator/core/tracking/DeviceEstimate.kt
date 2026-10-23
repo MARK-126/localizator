@@ -34,6 +34,7 @@ data class DeviceEstimate(
     val id: String,
     val name: String?,
     val manufacturerId: Int?,
+    val category: DeviceCategory,
     val rawRssi: Int,
     val filteredRssi: Double,
     val distanceMeters: Double,

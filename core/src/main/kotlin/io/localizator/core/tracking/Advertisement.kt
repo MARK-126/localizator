@@ -8,6 +8,7 @@ package io.localizator.core.tracking
  * @property txPower TX Power Level anunciado (dBm a 0 m), si existe.
  * @property timestampMs instante de recepción (ms, reloj monotónico).
  * @property manufacturerId Company Identifier del Bluetooth SIG, si existe.
+ * @property category tipo de dispositivo según su Class of Device, si se conoce.
  */
 data class Advertisement(
     val id: String,
@@ -16,4 +17,5 @@ data class Advertisement(
     val txPower: Int? = null,
     val timestampMs: Long,
     val manufacturerId: Int? = null,
+    val category: DeviceCategory = DeviceCategory.UNKNOWN,
 )

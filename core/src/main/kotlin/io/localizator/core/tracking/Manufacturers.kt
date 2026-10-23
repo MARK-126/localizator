@@ -3,13 +3,17 @@ package io.localizator.core.tracking
 /** Nombres de fabricantes por Company Identifier del Bluetooth SIG (Assigned Numbers). */
 object Manufacturers {
 
+    const val APPLE = 0x004C
+    const val SAMSUNG = 0x0075
+    const val GOOGLE = 0x00E0
+
     private val names = mapOf(
         0x0006 to "Microsoft",
-        0x004C to "Apple",
-        0x0075 to "Samsung",
+        APPLE to "Apple",
+        SAMSUNG to "Samsung",
         0x0087 to "Garmin",
         0x009E to "Bose",
-        0x00E0 to "Google",
+        GOOGLE to "Google",
         0x012D to "Sony",
     )
 
