@@ -5,6 +5,8 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.os.ParcelUuid
+import io.localizator.core.beacon.BeaconProtocol
 import io.localizator.core.tracking.Advertisement
 import io.localizator.core.tracking.DeviceCategory
 import io.localizator.core.tracking.DeviceNames
@@ -81,7 +83,8 @@ private fun ScanResult.toSample(): ScanSample {
         connectable = isConnectable,
         rawBytes = record?.bytes?.toHex().orEmpty(),
     )
-    return ScanSample(advertisement, details)
+    val beaconPayload = record?.getServiceData(ParcelUuid(BeaconProtocol.SERVICE_UUID))
+    return ScanSample(advertisement, details, beaconPayload)
 }
 
 @SuppressLint("MissingPermission")
