@@ -16,7 +16,7 @@ gradle :core:test
 
 | Paquete | Contenido |
 |---|---|
-| `io.localizator.core.signal` | `PathLossModel`, `KalmanFilter`, `TrendDetector`, `Trend` |
+| `io.localizator.core.signal` | `PathLossModel`, `KalmanFilter`, `TrendDetector`, `Trend`, `HeadingFilter`, `ProximityFeedback` |
 | `io.localizator.core.calibration` | `Calibrator` |
 | `io.localizator.core.beacon` | `BeaconProtocol`, `RotatingId`, `BeaconCodec`, `PairedBeacon`, `PairingCode`, `BeaconMatcher` |
 | `io.localizator.core.tracking` | `DeviceTracker`, `Advertisement`, `DeviceEstimate`, `ProximityZone`, `ModelSource`, `Manufacturers`, `DeviceCategory`, `NearbyFilter`, `DeviceNames` |
@@ -78,6 +78,23 @@ Pendiente del RSSI filtrado por mínimos cuadrados, sobre una ventana deslizante
 `trend()`: `APPROACHING` si la pendiente supera el umbral, `MOVING_AWAY` si es menor que el
 umbral negativo, `STEADY` en otro caso y `UNKNOWN` si no hay muestras suficientes.
 No es thread-safe.
+
+## `signal.HeadingFilter`
+
+Suavizado exponencial del rumbo sobre el vector unitario `(cos θ, sin θ)`, lo que evita el salto
+en el cruce 359° → 0°. `update(degrees)` devuelve el rumbo en [0, 360); `normalize(degrees)` lleva
+cualquier ángulo a ese rango. Parámetro `alpha` en (0, 1], por defecto 0,15. No es thread-safe.
+
+## `signal.ProximityFeedback`
+
+`pulseIntervalMs(d)`: intervalo entre pulsos de vibración, interpolado en escala logarítmica.
+
+| Parámetro | Por defecto |
+|---|---|
+| `nearMeters` → `minIntervalMs` | 0,5 m → 150 ms |
+| `farMeters` → `maxIntervalMs` | 10 m → 1500 ms |
+
+Fuera del rango satura; una distancia `NaN` da `maxIntervalMs`.
 
 ## `calibration.Calibrator`
 
@@ -185,6 +202,8 @@ Implementa el protocolo de [`FARO.md`](FARO.md).
 | `Calibrator` | Ajuste con 1 punto, recuperación de P1m y n con 2 puntos y ruido, muestras insuficientes |
 | `Manufacturers` | Fabricantes conocidos, desconocidos y nulos, etiqueta hexadecimal |
 | `NearbyFilter` | Distancia máxima, filtro Android, heurística por categoría y fabricante, fabricantes no iniciales |
+| `HeadingFilter` | Primera lectura, cruce 359°→1°, convergencia, normalización |
+| `ProximityFeedback` | Saturación, monotonía, punto medio geométrico |
 | `beacon` | ID rotativo determinista y por ventana, codec (P1m, desconocido, versión y tamaño inválidos), código de emparejamiento (ida y vuelta, acentos, inválidos), reconocimiento con ±1 ventana y faros ajenos |
 | `DeviceCategory` | Conversión de major class (`0x0000` y `0x1F00` → `UNKNOWN`), anuncio real de un Galaxy S25 Ultra pasa el filtro Android |
 | `DeviceNames` | Recorte, vacíos y nulos, bytes no decodificables y caracteres de control |

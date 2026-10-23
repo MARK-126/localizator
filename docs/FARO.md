@@ -82,4 +82,4 @@ dispositivo con root sería legible; se acepta para el MVP.
 
 ## Fuera de alcance de esta fase
 
-Calibración de P1m (fase 07), hacer sonar por GATT (fase 09), activación remota y UWB.
+Calibración de P1m (fase 08), hacer sonar por GATT (fase 10), activación remota y UWB.

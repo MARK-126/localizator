@@ -8,10 +8,12 @@ import io.localizator.app.ble.AdvertisementDetails
 import io.localizator.app.ble.BleScanner
 import io.localizator.app.ble.ScanSample
 import io.localizator.app.localizatorApp
+import io.localizator.app.sensors.CompassProvider
 import io.localizator.core.beacon.BeaconCodec
 import io.localizator.core.beacon.BeaconMatcher
 import io.localizator.core.beacon.PairedBeacon
 import io.localizator.core.beacon.PairingCode
+import io.localizator.core.signal.HeadingFilter
 import io.localizator.core.signal.PathLossModel
 import io.localizator.core.tracking.Advertisement
 import io.localizator.core.tracking.DeviceEstimate
@@ -23,6 +25,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -111,6 +116,17 @@ class NearbyViewModel(application: Application) : AndroidViewModel(application) 
             selected = byId[currentSelection]?.let { SelectedDevice(it, details[it.id]) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), NearbyUiState())
+
+    private val compass = CompassProvider(application)
+
+    /** `true` si el dispositivo tiene sensor de rotación para la brújula. */
+    val compassAvailable: Boolean = compass.isAvailable
+
+    /** Rumbo suavizado con [HeadingFilter] (grados, [0, 360)), o `null` hasta la primera lectura. */
+    val heading: StateFlow<Double?> = flow {
+        val filter = HeadingFilter()
+        emitAll(compass.azimuthDegrees().map { filter.update(it) })
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
     @Volatile
     private var matcher = BeaconMatcher(pairedRepository.beacons.value)

@@ -5,6 +5,7 @@ recital) usando Bluetooth Low Energy, priorizando la precisión.
 
 - Arquitectura y decisiones de diseño: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Faro y emparejamiento: [`docs/FARO.md`](docs/FARO.md)
+- Búsqueda precisa (radar): [`docs/RADAR.md`](docs/RADAR.md)
 - Módulos: [`docs/CORE.md`](docs/CORE.md), [`docs/APP.md`](docs/APP.md)
 - CI y control de merges: [`docs/CI.md`](docs/CI.md)
 
