@@ -89,6 +89,8 @@
     <string name="map_no_permission">Sin permiso de ubicación: el mapa no puede mostrar tu posición.</string>
     <string name="map_waiting_own">Esperando tu ubicación…</string>
     <string name="map_estimate_line">Estimado: ~%1$s hacia el %2$s</string>
+    <string name="map_use_radar">Estás muy cerca: el Bluetooth es más preciso que el GPS. Usa el radar.</string>
+    <string name="map_back_to_radar">Volver al radar</string>
     <string name="map_inconsistent">GPS y Bluetooth no coinciden: el GPS puede ser impreciso o antiguo.</string>
     <string-array name="cardinals_8">
         <item>norte</item>

@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +61,8 @@ import org.osmdroid.util.GeoPoint as OsmPoint
 /**
  * Mapa (OpenStreetMap) de un teléfono emparejado: posición propia, círculo GPS del teléfono buscado
  * (influencia), anillo BLE alrededor de este teléfono (precisión) y punto estimado por
- * [LocationFusion]. Solicita permiso de ubicación al abrirse.
+ * [LocationFusion]. Si la distancia BLE es menor que la precisión GPS, no muestra la estimación y
+ * sugiere volver al radar. Solicita permiso de ubicación al abrirse.
  */
 @Composable
 fun MapScreen(
@@ -134,6 +136,7 @@ fun MapScreen(
             permissionGranted = permissionGranted,
             hasOwnLocation = ownPoint != null,
             fused = fused,
+            onBackToRadar = onBack,
         )
     }
 }
@@ -204,7 +207,7 @@ private fun OsmMap(ownPoint: GeoPoint?, phone: MyPhone?, fused: FusedLocation?) 
                 centered = true
             }
         }
-        if (fused != null && fused.consistent) {
+        if (fused != null && fused.consistent && !fused.preferBluetooth) {
             map.overlays += Marker(map).apply {
                 position = OsmPoint(fused.estimate.latitude, fused.estimate.longitude)
                 title = estimateLabel
@@ -222,6 +225,7 @@ private fun MapInfo(
     permissionGranted: Boolean,
     hasOwnLocation: Boolean,
     fused: FusedLocation?,
+    onBackToRadar: () -> Unit,
 ) {
     val name = phone?.beacon?.name.orEmpty()
     val cardinals = stringArrayResource(R.array.cardinals_8)
@@ -253,6 +257,7 @@ private fun MapInfo(
             !permissionGranted -> stringResource(R.string.map_no_permission)
             !hasOwnLocation -> stringResource(R.string.map_waiting_own)
             fused == null -> null
+            fused.preferBluetooth -> stringResource(R.string.map_use_radar)
             fused.consistent -> stringResource(
                 R.string.map_estimate_line,
                 formatMeters(estimate?.distanceMeters ?: 0.0),
@@ -261,6 +266,9 @@ private fun MapInfo(
             else -> stringResource(R.string.map_inconsistent)
         }
         if (summary != null) Text(summary, style = MaterialTheme.typography.titleMedium)
+        if (fused?.preferBluetooth == true) {
+            TextButton(onClick = onBackToRadar) { Text(stringResource(R.string.map_back_to_radar)) }
+        }
     }
 }
 
