@@ -12,10 +12,12 @@ se actualiza con cada cambio de código y cada prueba en un dispositivo real.
 
 | Tema | Decisión |
 |---|---|
-| Diagnóstico | Pantalla de diagnóstico que se muestra automáticamente en el **primer inicio** y cuando cambia la **versión de Android** (`Build.VERSION.SDK_INT`). Informe copiable |
+| Diagnóstico | Pantalla de diagnóstico que se muestra automáticamente en el **primer inicio** y cuando cambia la **versión de Android** (`Build.VERSION.SDK_INT`), y accesible en cualquier momento desde el menú. Informe copiable |
 | Teléfono sin emisión BLE (H2) | Se permite usarlo **como buscador**. *Proteger* muestra un mensaje claro de que este teléfono no puede emitir el faro |
 | Fallos de emisión (H3, H4) | Se informan en *Proteger* y en la notificación, sin reintentos silenciosos |
-| Reinicio del teléfono (S7) | En discusión |
+| Reinicio del teléfono (S7) | Si la protección estaba activa, se reactiva el faro al arrancar. Interruptor *Reactivar al reiniciar*, **activado por defecto** e informado en el consentimiento. La ubicación GPS no se reactiva (requeriría ubicación en segundo plano) |
+| Antes del primer desbloqueo (S13) | El faro emite también antes del primer desbloqueo (*Direct Boot*): el secreto y el estado de protección se guardan en el almacenamiento protegido por el dispositivo. Ver [`SEGURIDAD.md`](SEGURIDAD.md) |
+| Detener la protección (S14) | La acción *Detener* de la notificación exige desbloquear el teléfono (`setAuthenticationRequired`, Android 12+); solo el dueño puede detener el faro |
 
 ## Diagnóstico
 
@@ -95,7 +97,10 @@ Lecturas por segundo del faro emparejado: 0,8 (H11)
 | S4 | Ahorro de batería del sistema | Puede pausar escaneo y GPS: avisar | ❓ |
 | S5 | Pantalla apagada mucho tiempo (Doze): el ID rotativo deja de rotar | Rota igual | ❌ sospechado |
 | S6 | Batería de la app "Restringida" | Avisar | ❌ |
-| S7 | Reinicio del teléfono | No se reactiva (decisión actual, en discusión) | ✅ |
+| S7 | Reinicio del teléfono | Reactivar el faro si la protección estaba activa | ❌ |
+| S13 | Reinicio sin desbloquear (quien encuentra el teléfono no conoce el PIN) | El faro emite igual | ❌ |
+| S14 | *Detener* desde la notificación con la pantalla bloqueada | Exige desbloquear | ❌ |
+| S15 | Bluetooth o modo avión desde los ajustes rápidos con la pantalla bloqueada | Fuera del control de la app: recomendar *Bloquear red y seguridad* (Samsung) o la protección antirrobo (Android 15) | ❌ sin guía |
 | S8 | Forzar detención o actualizar la app | Reanudar al abrirla | ✅ |
 | S9 | Hora del teléfono desfasada más de 15 min | Avisar del desfase | ⚠️ tolerancia ±15 min |
 | S10 | Cambio de zona horaria | Sin efecto (epoch) | ✅ · ❓ |
@@ -161,4 +166,4 @@ Lecturas por segundo del faro emparejado: 0,8 (H11)
 |---|---|---|---|
 | Samsung Galaxy S23 Ultra | — | Buscador | Funciona (fases 04–08) |
 | Samsung Galaxy S25 Ultra | — | Protegido | Funciona (fases 04–08) |
-| Motorola (modelo pendiente) | — | Pendiente | No reconocido; causa por diagnosticar (H2 o V1/V2) |
+| Motorola Edge 30 Neo | 14 | Protegido y buscador | No se reconocen en ningún sentido con el S23 Ultra. Descartados H2 y V1/V2 (Bluetooth 5.1, Android 14). Sospechas: hora desfasada (S9), reinstalación tras emparejar (R7), emisión fallida (H3/H4) |
